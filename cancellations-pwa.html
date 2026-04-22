@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a1a2e">
+<title>إدارة الإلغاءات - عصر الشرق</title>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot,
+           query, orderBy, serverTimestamp, Timestamp }
+    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey:            "AIzaSyDr0Jcv-1O47S198AWpFILq7O5MwXoRFGg",
+    authDomain:        "cansel-94336.firebaseapp.com",
+    databaseURL:       "https://cansel-94336-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId:         "cansel-94336",
+    storageBucket:     "cansel-94336.firebasestorage.app",
+    messagingSenderId: "1047202012197",
+    appId:             "1:1047202012197:web:715a3232395ce1cd99f3cc"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  const DEFAULT_BRANCHES = [
+    "الشعب","البنوك","الغدير","الحرية","الدورة",
+    "الغزالية","بسماية","الأعظمية","حي العامل","البعيثة"
+  ];
+
+  function loadBranches() {
+    try { const s=localStorage.getItem('branches'); return s?JSON.parse(s):[...DEFAULT_BRANCHES]; }
+    catch { return [...DEFAULT_BRANCHES]; }
+  }
+  function saveBranches(arr) { localStorage.setItem('branches',JSON.stringify(arr)); }
+
+  window.BRANCHES = loadBranches();
+
+  window.addBranch = function(name) {
+    name = name.trim();
+    if (!name) return false;
+    if (window.BRANCHES.includes(name)) return 'dup';
+    window.BRANCHES.push(name);
+    saveBranches(window.BRANCHES);
+    window.populateBranchSelect();
+    return true;
+  };
+
+  window.removeBranch = function(name) {
+    window.BRANCHES = window.BRANCHES.filter(b=>b!==name);
+    saveBranches(window.BRANCHES);
+    window.populateBranchSelect();
+    window.renderBranchList();
+  };
+
+  function loadTodayCancellations() {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const q = query(collection(db,"cancellations"),orderBy("timestamp","desc"));
+    onSnapshot(q, snap => {
+      const records=[];
+      snap.forEach(d=>{
+        const data=d.data();
+        if(data.timestamp&&data.timestamp.toDate()>=today)
+          records.push({id:d.id,...data});
+      });
+      window.renderTable(records);
+    });
+  }
+
+  window.addCancellation = async function(data) {
+    try { await addDoc(collection(db,"cancellations"),{...data,timestamp:serverTimestamp()}); return true; }
+    catch(e) { window.notify("خطأ في الحفظ: "+e.message,"error"); return false; }
+  };
+
+  window.deleteCancellation = async function(id) {
+    try { await deleteDoc(doc(db,"cancellations",id)); window.notify("تم حذف السجل بنجاح","success"); }
+    catch { window.notify("خطأ في الحذف","error"); }
+  };
+
+  window.notify = function(msg,type) {
+    const n=document.getElementById('notification');
+    if(!n) return;
+    n.textContent=msg; n.className='notification show '+type;
+    setTimeout(()=>n.className='notification',3200);
+  };
+
+  window.showNote = window.notify;
+
+  window.addEventListener('DOMContentLoaded',()=>{
+    loadTodayCancellations();
+    window.populateBranchSelect();
+    window.renderBranchList();
+  });
+
+  window.populateBranchSelect = function() {
+    const sel=document.getElementById('branchSelect');
+    if(!sel) return;
+    sel.innerHTML='<option value="">-- اختر الفرع --</option>';
+    window.BRANCHES.forEach(b=>{
+      const o=document.createElement('option');
+      o.value=o.textContent=b; sel.appendChild(o);
+    });
+  };
+
+  window.renderBranchList = function() {
+    const ul=document.getElementById('branchList');
+    if(!ul) return;
+    ul.innerHTML=window.BRANCHES.map(b=>`
+      <li class="branch-item">
+        <span>${b}</span>
+        <button class="btn-rm-branch" onclick="confirmRemoveBranch('${b}')">✕</button>
+      </li>`).join('');
+  };
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+<script>
+if(typeof docx!=='undefined')window.docx=docx;
+else{window.docx=null;console.warn('docx not available');}
+</script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap');
+:root{--bg:#0f0f1a;--surface:#16162a;--card:#1e1e35;--border:#2a2a4a;--accent:#e8a020;--text:#e8e8f0;--muted:#7a7a9a;--danger:#e74c3c;--success:#27ae60;--radius:12px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;direction:rtl;}
+
+.header{background:linear-gradient(135deg,#1a1a35,#0f0f1a);border-bottom:2px solid var(--accent);padding:14px 22px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 4px 30px rgba(232,160,32,.15);}
+.logo-area{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:42px;height:42px;background:linear-gradient(135deg,var(--accent),#f0c040);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.logo-text h1{font-size:17px;font-weight:700;color:var(--accent);}
+.logo-text p{font-size:11px;color:var(--muted);}
+.header-right{display:flex;align-items:center;gap:12px;}
+.header-date{text-align:center;font-size:12px;color:var(--muted);}
+.header-date strong{display:block;color:var(--accent);font-size:15px;}
+.btn-settings{padding:8px 14px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'Tajawal',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;}
+.btn-settings:hover{border-color:var(--accent);color:var(--accent);}
+
+.notification{position:fixed;top:78px;left:50%;transform:translateX(-50%);padding:11px 26px;border-radius:30px;font-weight:600;opacity:0;pointer-events:none;transition:all .3s;z-index:999;white-space:nowrap;}
+.notification.show{opacity:1;}
+.notification.success{background:#155c30;border:1px solid #27ae60;color:#a3ffcc;}
+.notification.error{background:#5c1515;border:1px solid #e74c3c;color:#ffaaaa;}
+
+.main{max-width:1100px;margin:0 auto;padding:22px 14px;}
+.stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:13px 14px;text-align:center;}
+.stat-card .val{font-size:26px;font-weight:900;color:var(--accent);}
+.stat-card .lbl{font-size:11px;color:var(--muted);margin-top:2px;}
+
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:20px;}
+.form-card h2{font-size:15px;font-weight:700;color:var(--accent);margin-bottom:14px;}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:12px;}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500;}
+.field input,.field select{width:100%;padding:10px 12px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:14px;transition:border-color .2s;outline:none;}
+.field input:focus,.field select:focus{border-color:var(--accent);}
+.field select option{background:#1e1e35;}
+
+/* ── Reason chips ── */
+.reason-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px;}
+.reason-chip{padding:6px 14px;border-radius:22px;background:var(--surface);border:1.5px solid var(--border);color:var(--muted);font-family:'Tajawal',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
+.reason-chip:hover{border-color:var(--accent);color:var(--accent);}
+.reason-chip.selected{background:rgba(232,160,32,.15);border-color:var(--accent);color:var(--accent);}
+
+.toggle-group{display:flex;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;}
+.toggle-btn{flex:1;padding:10px;background:var(--surface);color:var(--muted);font-family:'Tajawal',sans-serif;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .2s;}
+.toggle-btn.active{background:var(--accent);color:#000;}
+.btn-submit{width:100%;padding:12px;background:linear-gradient(135deg,var(--accent),#f0c040);color:#000;font-family:'Tajawal',sans-serif;font-size:15px;font-weight:700;border:none;border-radius:8px;cursor:pointer;transition:opacity .2s;}
+.btn-submit:hover{opacity:.9;}
+
+.table-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px;}
+.table-header{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap;}
+.table-header h2{font-size:15px;font-weight:700;color:var(--accent);}
+.search-box{padding:8px 12px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:13px;width:190px;outline:none;}
+.search-box:focus{border-color:var(--accent);}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead tr{background:#12122a;}
+th{padding:10px 13px;text-align:right;color:var(--muted);font-weight:600;font-size:12px;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:10px 13px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle;}
+tr:hover td{background:rgba(232,160,32,.04);}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge-assigned{background:rgba(39,174,96,.15);color:#6ee69b;border:1px solid rgba(39,174,96,.3);}
+.badge-notassigned{background:rgba(231,76,60,.15);color:#ff9a9a;border:1px solid rgba(231,76,60,.3);}
+.branch-tag{display:inline-block;padding:3px 10px;background:rgba(232,160,32,.12);color:var(--accent);border-radius:20px;font-size:11px;font-weight:600;border:1px solid rgba(232,160,32,.25);}
+.time-text{color:var(--muted);font-size:12px;}
+.btn-delete{padding:5px 11px;background:rgba(231,76,60,.12);color:#ff8888;border:1px solid rgba(231,76,60,.3);border-radius:6px;font-family:'Tajawal',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.btn-delete:hover{background:rgba(231,76,60,.25);}
+.empty-state{text-align:center;padding:44px;color:var(--muted);font-size:14px;}
+
+.export-card{background:linear-gradient(135deg,#1a1a35,#1e1e2a);border:1px solid rgba(232,160,32,.3);border-radius:var(--radius);padding:18px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+.export-info h3{font-size:15px;color:var(--accent);}
+.export-info p{font-size:12px;color:var(--muted);margin-top:3px;}
+.btn-export{padding:12px 26px;background:linear-gradient(135deg,#c0392b,#e74c3c);color:#fff;font-family:'Tajawal',sans-serif;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;transition:opacity .2s;white-space:nowrap;display:flex;align-items:center;gap:8px;}
+.btn-export:hover{opacity:.9;}
+
+.loading-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;flex-direction:column;gap:14px;}
+.loading-overlay.show{display:flex;}
+.spinner{width:46px;height:46px;border:4px solid rgba(232,160,32,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;align-items:center;justify-content:center;}
+.overlay.show{display:flex;}
+.dialog-box{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:26px;max-width:400px;width:92%;}
+.dialog-box h3{font-size:17px;margin-bottom:8px;}
+.dialog-box p{color:var(--muted);font-size:13px;margin-bottom:18px;}
+.dialog-btns{display:flex;gap:10px;justify-content:center;}
+.dialog-btns button{padding:9px 22px;border-radius:8px;border:none;font-family:'Tajawal',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
+.btn-yes{background:var(--danger);color:#fff;}
+.btn-no{background:var(--border);color:var(--text);}
+
+/* Settings drawer */
+.settings-panel{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:400;align-items:flex-start;justify-content:flex-start;}
+.settings-panel.show{display:flex;}
+.settings-drawer{background:var(--card);border-left:1px solid var(--border);width:320px;max-width:90vw;height:100vh;overflow-y:auto;padding:24px;animation:slideIn .25s ease;}
+@keyframes slideIn{from{transform:translateX(-100%);}to{transform:translateX(0);}}
+.settings-drawer h2{font-size:17px;font-weight:700;color:var(--accent);margin-bottom:18px;}
+.branch-list-wrap h3{font-size:13px;color:var(--muted);margin-bottom:10px;}
+#branchList{list-style:none;display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+.branch-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:13px;}
+.btn-rm-branch{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px;transition:color .2s;}
+.btn-rm-branch:hover{color:var(--danger);}
+.add-branch-row{display:flex;gap:8px;}
+.add-branch-row input{flex:1;padding:9px 12px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:13px;outline:none;}
+.add-branch-row input:focus{border-color:var(--accent);}
+.btn-add-branch{padding:9px 16px;background:var(--accent);color:#000;font-family:'Tajawal',sans-serif;font-size:13px;font-weight:700;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;}
+.btn-close-settings{width:100%;margin-top:20px;padding:10px;background:var(--border);color:var(--text);font-family:'Tajawal',sans-serif;font-size:14px;font-weight:600;border:none;border-radius:8px;cursor:pointer;}
+
+@media(max-width:600px){.header{flex-wrap:wrap;gap:8px;}.search-box{width:130px;}.stats-bar{grid-template-columns:repeat(2,1fr);}.settings-drawer{width:100vw;}}
+</style>
+</head>
+<body>
+
+<div id="notification" class="notification"></div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <p style="color:var(--muted)">جاري تصدير التقرير...</p>
+</div>
+
+<!-- Confirm Delete -->
+<div class="overlay" id="confirmOverlay">
+  <div class="dialog-box" style="text-align:center">
+    <h3>🗑️ تأكيد الحذف</h3>
+    <p>هل تريد حذف هذا السجل؟<br>يُستخدم في حال استلم الزبون الطلب.</p>
+    <div class="dialog-btns">
+      <button class="btn-yes" id="confirmYes">نعم، احذف</button>
+      <button class="btn-no"  id="confirmNo">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Remove Branch -->
+<div class="overlay" id="rmBranchOverlay">
+  <div class="dialog-box" style="text-align:center">
+    <h3>⚠️ حذف الفرع</h3>
+    <p id="rmBranchMsg"></p>
+    <div class="dialog-btns">
+      <button class="btn-yes" id="rmBranchYes">نعم، احذف</button>
+      <button class="btn-no"  id="rmBranchNo">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Drawer -->
+<div class="settings-panel" id="settingsPanel" onclick="closeSettingsBg(event)">
+  <div class="settings-drawer" id="settingsDrawer">
+    <h2>⚙️ إدارة الفروع</h2>
+    <div class="branch-list-wrap">
+      <h3>🏪 الفروع الحالية</h3>
+      <ul id="branchList"></ul>
+      <div class="add-branch-row">
+        <input id="newBranchInput" placeholder="اسم الفرع الجديد..." onkeydown="if(event.key==='Enter')addBranchUI()">
+        <button class="btn-add-branch" onclick="addBranchUI()">+ إضافة</button>
+      </div>
+    </div>
+    <button class="btn-close-settings" onclick="closeSettings()">✕ إغلاق</button>
+  </div>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo-area">
+    <div class="logo-icon">🍽️</div>
+    <div class="logo-text">
+      <h1>إدارة الإلغاءات</h1>
+      <p>شركة عصر الشرق - خدمة العملاء</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="header-date">
+      <strong id="currentDate"></strong>
+      <span id="currentTime"></span>
+    </div>
+    <button class="btn-settings" onclick="openSettings()">🏪 الفروع</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="stats-bar">
+    <div class="stat-card"><div class="val" id="statTotal">0</div><div class="lbl">إجمالي الإلغاءات</div></div>
+    <div class="stat-card"><div class="val" id="statAssigned" style="color:#6ee69b">0</div><div class="lbl">متعين لطيار</div></div>
+    <div class="stat-card"><div class="val" id="statNotAssigned" style="color:#ff9a9a">0</div><div class="lbl">غير متعين</div></div>
+    <div class="stat-card"><div class="val" id="statBranches" style="color:#70c0ff">0</div><div class="lbl">فروع</div></div>
+  </div>
+
+  <div class="form-card">
+    <h2>➕ إضافة إلغاء جديد</h2>
+    <div class="form-grid">
+      <div class="field">
+        <label>الفرع *</label>
+        <select id="branchSelect"><option value="">-- اختر الفرع --</option></select>
+      </div>
+      <div class="field">
+        <label>رقم الهاتف *</label>
+        <input type="text" id="phoneInput" placeholder="07xxxxxxxxx" dir="ltr">
+      </div>
+      <div class="field">
+        <label>رقم الأوردر *</label>
+        <input type="text" id="orderIdInput" placeholder="مثال: 12345" dir="ltr">
+      </div>
+      <div class="field">
+        <label>حالة التعيين</label>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="toggleAssigned"    onclick="setAssigned(true)">✈️ متعين لطيار</button>
+          <button class="toggle-btn"        id="toggleNotAssigned" onclick="setAssigned(false)">❌ غير متعين</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reason -->
+    <div class="field" style="margin-bottom:14px">
+      <label>سبب الإلغاء *</label>
+      <div class="reason-chips" id="reasonChips">
+        <button class="reason-chip" onclick="selectReason(this,'عدم رد')">📵 عدم رد</button>
+        <button class="reason-chip" onclick="selectReason(this,'زبون')">👤 زبون</button>
+        <button class="reason-chip" onclick="selectReason(this,'تكرار')">🔁 تكرار</button>
+        <button class="reason-chip" onclick="selectReason(this,'تحويل')">🔄 تحويل</button>
+        <button class="reason-chip" onclick="selectReason(this,'خارج الزبون')">🚫 خارج الزبون</button>
+      </div>
+    </div>
+
+    <button class="btn-submit" onclick="submitForm()">💾 حفظ الإلغاء</button>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <h2>📋 إلغاءات اليوم</h2>
+      <input class="search-box" id="searchBox" placeholder="🔍 بحث..." oninput="filterTable()">
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>الفرع</th><th>رقم الأوردر</th><th>رقم الهاتف</th>
+            <th>السبب</th><th>الحالة</th><th>الوقت</th><th>إجراء</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="8" class="empty-state">لا توجد إلغاءات بعد</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="export-card">
+    <div class="export-info">
+      <h3>📄 تصدير تقرير اليوم</h3>
+      <p>يتم توليد ملف Word بنفس تصميم النموذج الرسمي، مجمّعاً حسب الفروع</p>
+    </div>
+    <button class="btn-export" onclick="exportWord()">📥 تصدير Word</button>
+  </div>
+
+</div>
+
+<script>
+let allRecords=[], isAssigned=true, selectedReason='', pendingDeleteId=null, pendingRemoveBranch=null;
+
+// Clock
+function updateClock(){
+  const n=new Date();
+  document.getElementById('currentDate').textContent=n.toLocaleDateString('ar-IQ',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('currentTime').textContent=n.toLocaleTimeString('ar-IQ');
+}
+updateClock(); setInterval(updateClock,1000);
+
+// Assigned toggle
+function setAssigned(v){
+  isAssigned=v;
+  document.getElementById('toggleAssigned').classList.toggle('active',v);
+  document.getElementById('toggleNotAssigned').classList.toggle('active',!v);
+}
+
+// Reason chips
+function selectReason(btn,reason){
+  if(selectedReason===reason){ selectedReason=''; btn.classList.remove('selected'); return; }
+  document.querySelectorAll('.reason-chip').forEach(c=>c.classList.remove('selected'));
+  selectedReason=reason; btn.classList.add('selected');
+}
+
+// Submit
+async function submitForm(){
+  const branch=document.getElementById('branchSelect').value;
+  const phone=document.getElementById('phoneInput').value.trim();
+  const orderId=document.getElementById('orderIdInput').value.trim();
+  if(!branch||!phone||!orderId){ showNote("يرجى تعبئة الفرع ورقم الهاتف ورقم الأوردر","error"); return; }
+  if(!selectedReason){ showNote("يرجى اختيار سبب الإلغاء","error"); return; }
+  const ok=await window.addCancellation({branchName:branch,phoneNumber:phone,orderId:orderId,reason:selectedReason,isAssigned:isAssigned});
+  if(ok){
+    document.getElementById('phoneInput').value='';
+    document.getElementById('orderIdInput').value='';
+    document.getElementById('branchSelect').value='';
+    document.querySelectorAll('.reason-chip').forEach(c=>c.classList.remove('selected'));
+    selectedReason='';
+    showNote("تم حفظ الإلغاء بنجاح","success");
+  }
+}
+
+// Render
+window.renderTable=function(records){ allRecords=records; updateStats(records); doRender(records); };
+function filterTable(){
+  const q=document.getElementById('searchBox').value.toLowerCase();
+  doRender(allRecords.filter(r=>(r.branchName||'').includes(q)||(r.phoneNumber||'').includes(q)||(r.orderId||'').includes(q)||(r.reason||'').includes(q)));
+}
+function doRender(records){
+  const tbody=document.getElementById('tableBody');
+  if(!records.length){ tbody.innerHTML='<tr><td colspan="8" class="empty-state">لا توجد إلغاءات بعد</td></tr>'; return; }
+  tbody.innerHTML=records.map((r,i)=>{
+    const ts=r.timestamp?.toDate?r.timestamp.toDate():new Date();
+    const time=ts.toLocaleTimeString('ar-IQ',{hour:'2-digit',minute:'2-digit'});
+    const badge=r.isAssigned
+      ?'<span class="badge badge-assigned">✈️ متعين</span>'
+      :'<span class="badge badge-notassigned">❌ غير متعين</span>';
+    return `<tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td><span class="branch-tag">${r.branchName||''}</span></td>
+      <td style="font-weight:700;direction:ltr">${r.orderId||''}</td>
+      <td style="direction:ltr;color:var(--muted)">${r.phoneNumber||''}</td>
+      <td>${r.reason||'—'}</td>
+      <td>${badge}</td>
+      <td class="time-text">${time}</td>
+      <td><button class="btn-delete" onclick="confirmDelete('${r.id}')">🗑️ استلم الزبون</button></td>
+    </tr>`;
+  }).join('');
+}
+function updateStats(r){
+  document.getElementById('statTotal').textContent=r.length;
+  document.getElementById('statAssigned').textContent=r.filter(x=>x.isAssigned).length;
+  document.getElementById('statNotAssigned').textContent=r.filter(x=>!x.isAssigned).length;
+  document.getElementById('statBranches').textContent=new Set(r.map(x=>x.branchName)).size;
+}
+
+// Delete confirm
+function confirmDelete(id){ pendingDeleteId=id; document.getElementById('confirmOverlay').classList.add('show'); }
+document.getElementById('confirmYes').onclick=async()=>{
+  document.getElementById('confirmOverlay').classList.remove('show');
+  if(pendingDeleteId){ await window.deleteCancellation(pendingDeleteId); pendingDeleteId=null; }
+};
+document.getElementById('confirmNo').onclick=()=>{ document.getElementById('confirmOverlay').classList.remove('show'); pendingDeleteId=null; };
+
+// Settings
+function openSettings(){ document.getElementById('settingsPanel').classList.add('show'); }
+function closeSettings(){ document.getElementById('settingsPanel').classList.remove('show'); }
+function closeSettingsBg(e){ if(e.target===document.getElementById('settingsPanel')) closeSettings(); }
+
+function addBranchUI(){
+  const inp=document.getElementById('newBranchInput');
+  const val=inp.value.trim();
+  if(!val) return;
+  const res=window.addBranch(val);
+  if(res==='dup'){ showNote("الفرع موجود مسبقاً","error"); return; }
+  inp.value=''; window.renderBranchList();
+  showNote("تمت إضافة فرع: "+val,"success");
+}
+
+function confirmRemoveBranch(name){
+  pendingRemoveBranch=name;
+  document.getElementById('rmBranchMsg').textContent=`هل تريد حذف فرع "${name}" من القائمة؟`;
+  document.getElementById('rmBranchOverlay').classList.add('show');
+}
+document.getElementById('rmBranchYes').onclick=()=>{
+  document.getElementById('rmBranchOverlay').classList.remove('show');
+  if(pendingRemoveBranch){ window.removeBranch(pendingRemoveBranch); pendingRemoveBranch=null; }
+};
+document.getElementById('rmBranchNo').onclick=()=>{ document.getElementById('rmBranchOverlay').classList.remove('show'); pendingRemoveBranch=null; };
+
+// Word Export
+async function exportWord(){
+  if(!window.docx||!window.docx.Document){ showNote("جاري تحميل المكتبة...","error"); return; }
+  showLoading(true);
+  try{
+    const doc = window.docx;
+    const {Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,AlignmentType,WidthType,BorderStyle,ShadingType,VerticalAlign}=doc;
+    const today=new Date();
+    const dateStr=today.toLocaleDateString('ar-IQ',{year:'numeric',month:'numeric',day:'numeric'});
+    const brd={style:BorderStyle.SINGLE,size:6,color:"8B6914"};
+    const hBrd={style:BorderStyle.SINGLE,size:8,color:"5a3e00"};
+    const borders={top:brd,bottom:brd,left:brd,right:brd};
+    const hBorders={top:hBrd,bottom:hBrd,left:hBrd,right:hBrd};
+    const grouped={};
+    allRecords.forEach(r=>{ if(!grouped[r.branchName])grouped[r.branchName]=[]; grouped[r.branchName].push(r); });
+    const ordered=window.BRANCHES.filter(b=>grouped[b]);
+    const extras=Object.keys(grouped).filter(b=>!window.BRANCHES.includes(b));
+    const allBranches=[...ordered,...extras];
+    const children=[];
+    const mkP=(text,size,bold,color,after=80)=>new Paragraph({alignment:AlignmentType.CENTER,spacing:{before:0,after},children:[new TextRun({text,bold,size,font:"Traditional Arabic",color})]});
+    children.push(mkP("شركة عصر الشرق لإدارة المطاعم",32,true,"4a2c00",60));
+    children.push(mkP("قسم خدمة العملاء",26,true,"6b3f00",60));
+    children.push(mkP(dateStr,24,true,"333333",120));
+    children.push(new Paragraph({border:{bottom:{style:BorderStyle.SINGLE,size:8,color:"8B6914",space:1}},spacing:{before:0,after:180},children:[]}));
+    const TW=8504, colW=[1600,3004,2000,1900];
+    const mkH=(text,w)=>new TableCell({borders:hBorders,width:{size:w,type:WidthType.DXA},shading:{fill:"F5DEB3",type:ShadingType.CLEAR},verticalAlign:VerticalAlign.CENTER,margins:{top:80,bottom:80,left:120,right:120},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text,bold:true,size:20,font:"Traditional Arabic",color:"3d2000"})]})]});
+    const mkC=(text,w)=>new TableCell({borders,width:{size:w,type:WidthType.DXA},verticalAlign:VerticalAlign.CENTER,margins:{top:60,bottom:60,left:100,right:100},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:String(text||''),size:18,font:"Traditional Arabic"})]})]});
+    if(!allBranches.length) children.push(mkP("لا توجد إلغاءات لهذا اليوم",24,false,"888888"));
+    allBranches.forEach(branch=>{
+      const rows=grouped[branch]||[];
+      const tableRows=[new TableRow({children:[mkH("رقم الاوردر",colW[0]),mkH(`إلغاء فرع ${branch} -`,colW[1]),mkH("الرقم",colW[2]),mkH("الحالة",colW[3])]})];
+      if(!rows.length){ tableRows.push(new TableRow({children:colW.map(w=>mkC('',w))})); }
+      else rows.forEach(r=>tableRows.push(new TableRow({children:[mkC(r.orderId||'',colW[0]),mkC(r.reason||'',colW[1]),mkC(r.phoneNumber||'',colW[2]),mkC(r.isAssigned?'متعين':'غير متعين',colW[3])]})));
+      children.push(new Table({width:{size:TW,type:WidthType.DXA},columnWidths:colW,rows:tableRows,bidiVisual:true}));
+      children.push(new Paragraph({spacing:{before:0,after:200},children:[]}));
+    });
+    const document2=new Document({sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:1080,right:1080,bottom:1080,left:1080}}},children}]});
+    const buffer=await Packer.toBuffer(document2);
+    const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=`${dateStr.replace(/\//g,'-')}_تقرير_الإ��غاءات.docx`; a.click();
+    URL.revokeObjectURL(url);
+    showNote("تم تصدير التقرير بنجاح","success");
+  }catch(e){ console.error(e); showNote("خطأ في التصدير: "+e.message,"error"); }
+  finally{ showLoading(false); }
+}
+
+function showLoading(v){ document.getElementById('loadingOverlay').classList.toggle('show',v); }
+document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))submitForm(); });
+</script>
+</body>
+</html>
