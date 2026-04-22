@@ -350,7 +350,7 @@ tr:hover td{background:rgba(232,160,32,.04);}
       </div>
     </div>
 
-    <button class="btn-submit" onclick="submitForm()">💾 حفظ الإلغاء</button>
+    <button class="btn-submit" onclick="if(window.addCancellation){window.submitForm();}else{window.showNote('Firebase لم يحمل - افتح عبر سيرفر','error');}">💾 حفظ الإلغاء</button>
   </div>
 
   <div class="table-card">
@@ -409,12 +409,12 @@ function selectReason(btn,reason){
 }
 
 // Submit
-async function submitForm(){
+window.submitForm = async function(){
   const branch=document.getElementById('branchSelect').value;
   const phone=document.getElementById('phoneInput').value.trim();
   const orderId=document.getElementById('orderIdInput').value.trim();
-  if(!branch||!phone||!orderId){ showNote("يرجى تعبئة الفرع ورقم الهاتف ورقم الأوردر","error"); return; }
-  if(!selectedReason){ showNote("يرجى اختيار سبب الإلغاء","error"); return; }
+  if(!branch||!phone||!orderId){ window.showNote("يرجى تعبئة الفرع ورقم الهاتف ورقم الأوردر","error"); return; }
+  if(!selectedReason){ window.showNote("يرجى اختيار سبب الإلغاء","error"); return; }
   const ok=await window.addCancellation({branchName:branch,phoneNumber:phone,orderId:orderId,reason:selectedReason,isAssigned:isAssigned});
   if(ok){
     document.getElementById('phoneInput').value='';
@@ -422,7 +422,7 @@ async function submitForm(){
     document.getElementById('branchSelect').value='';
     document.querySelectorAll('.reason-chip').forEach(c=>c.classList.remove('selected'));
     selectedReason='';
-    showNote("تم حفظ الإلغاء بنجاح","success");
+    window.showNote("تم حفظ الإلغاء بنجاح","success");
   }
 }
 
