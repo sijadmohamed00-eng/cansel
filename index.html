@@ -350,7 +350,7 @@ tr:hover td{background:rgba(232,160,32,.04);}
       </div>
     </div>
 
-    <button class="btn-submit" onclick="window.submitForm()">💾 حفظ الإلغاء</button>
+    <button class="btn-submit" id="saveBtn">💾 حفظ الإلغاء</button>
   </div>
 
   <div class="table-card">
@@ -410,6 +410,7 @@ function selectReason(btn,reason){
 
 // Submit
 window.submitForm = async function(){
+  alert('submitForm called! addCancellation:' + typeof window.addCancellation);
   const branch=document.getElementById('branchSelect').value;
   const phone=document.getElementById('phoneInput').value.trim();
   const orderId=document.getElementById('orderIdInput').value.trim();
@@ -547,6 +548,7 @@ async function exportWord(){
 
 function showLoading(v){ document.getElementById('loadingOverlay').classList.toggle('show',v); }
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))window.submitForm(); });
+document.getElementById('saveBtn').addEventListener('click',function(){ window.submitForm(); });
 </script>
 </body>
 </html>
