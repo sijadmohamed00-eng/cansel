@@ -410,7 +410,14 @@ function selectReason(btn,reason){
 
 // Submit
 window.submitForm = async function(){
-  alert('submitForm called! addCancellation:' + typeof window.addCancellation);
+  if(typeof window.addCancellation !== 'function'){
+    window.showNote("جاري تحميل البيانات...","error");
+    await new Promise(r=>setTimeout(r,1000));
+    if(typeof window.addCancellation !== 'function'){
+      window.showNote("لم يتم تحميل Firebase","error");
+      return;
+    }
+  }
   const branch=document.getElementById('branchSelect').value;
   const phone=document.getElementById('phoneInput').value.trim();
   const orderId=document.getElementById('orderIdInput').value.trim();
@@ -548,7 +555,9 @@ async function exportWord(){
 
 function showLoading(v){ document.getElementById('loadingOverlay').classList.toggle('show',v); }
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))window.submitForm(); });
-document.getElementById('saveBtn').addEventListener('click',function(){ window.submitForm(); });
+document.addEventListener('DOMContentLoaded',function(){
+  document.getElementById('saveBtn').addEventListener('click',function(){ window.submitForm(); });
+});
 </script>
 </body>
 </html>
