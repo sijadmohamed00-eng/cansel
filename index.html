@@ -350,7 +350,7 @@ tr:hover td{background:rgba(232,160,32,.04);}
       </div>
     </div>
 
-    <button class="btn-submit" onclick="if(window.addCancellation){window.submitForm();}else{window.showNote('Firebase لم يحمل - افتح عبر سيرفر','error');}">💾 حفظ الإلغاء</button>
+    <button class="btn-submit" onclick="window.submitForm()">💾 حفظ الإلغاء</button>
   </div>
 
   <div class="table-card">
@@ -478,9 +478,9 @@ function addBranchUI(){
   const val=inp.value.trim();
   if(!val) return;
   const res=window.addBranch(val);
-  if(res==='dup'){ showNote("الفرع موجود مسبقاً","error"); return; }
+  if(res==='dup'){ window.showNote("الفرع موجود مسبقاً","error"); return; }
   inp.value=''; window.renderBranchList();
-  showNote("تمت إضافة فرع: "+val,"success");
+  window.showNote("تمت إضافة فرع: "+val,"success");
 }
 
 function confirmRemoveBranch(name){
@@ -501,7 +501,7 @@ async function exportWord(){
     if(!window.docxLib)window.docxLib = await import('https://unpkg.com/docx@8.5.0/+esm').then(m=>m.default||m);
     window.docx = window.docxLib;
   }
-  if(!window.docx||!window.docx.Document){ showNote("فشل تحميل المكتبة","error");return; }
+  if(!window.docx||!window.docx.Document){ window.showNote("فشل تحميل المكتبة","error");return; }
   showLoading(true);
   try{
     const{Document:Doc,Packer,Paragraph,TextRun,Table,TableRow,TableCell,AlignmentType,WidthType,BorderStyle,ShadingType,VerticalAlign}=window.docx;
@@ -540,13 +540,13 @@ async function exportWord(){
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a'); a.href=url; a.download=`cancellation_report_${dateStr.replace(/\//g,'-')}.docx`; a.click();
     URL.revokeObjectURL(url);
-    showNote("تم تصدير التقرير بنجاح","success");
-  }catch(e){ console.error(e); showNote("خطأ في التصدير: "+e.message,"error"); }
+    window.showNote("تم تصدير التقرير بنجاح","success");
+  }catch(e){ console.error(e); window.showNote("خطأ في التصدير: "+e.message,"error"); }
   finally{ showLoading(false); }
 }
 
 function showLoading(v){ document.getElementById('loadingOverlay').classList.toggle('show',v); }
-document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))submitForm(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))window.submitForm(); });
 </script>
 </body>
 </html>
