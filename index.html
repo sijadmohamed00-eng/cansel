@@ -6,7 +6,7 @@
 <title>إدارة الإلغاءات - عصر الشرق</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js"></script>
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap');
 :root{--bg:#0f0f1a;--surface:#16162a;--card:#1e1e35;--border:#2a2a4a;--accent:#e8a020;--text:#e8e8f0;--muted:#7a7a9a;--danger:#e74c3c;--success:#27ae60;--radius:12px;}
@@ -397,32 +397,7 @@ document.getElementById('rmBranchYes').onclick=()=>{
 document.getElementById('rmBranchNo').onclick=()=>{ document.getElementById('rmBranchOverlay').classList.remove('show'); pendingRemoveBranch=null; };
 
 // ── Word Export ──
-async function exportWord(){
-  if(typeof docx === 'undefined'){ showNote("مكتبة التصدير لم تتحمل بعد، انتظر ثانية وأعد المحاولة","error"); return; }
-  document.getElementById('loadingOverlay').classList.add('show');
-  try{
-    const {Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,AlignmentType,WidthType,BorderStyle,ShadingType,VerticalAlign}=docx;
-    const today=new Date();
-    const dateStr=today.toLocaleDateString('ar-IQ',{year:'numeric',month:'numeric',day:'numeric'});
-    const brd={style:BorderStyle.SINGLE,size:6,color:"8B6914"};
-    const hBrd={style:BorderStyle.SINGLE,size:8,color:"5a3e00"};
-    const borders={top:brd,bottom:brd,left:brd,right:brd};
-    const hBorders={top:hBrd,bottom:hBrd,left:hBrd,right:hBrd};
-    const grouped={};
-    allRecords.forEach(r=>{ if(!grouped[r.branchName])grouped[r.branchName]=[]; grouped[r.branchName].push(r); });
-    const ordered=BRANCHES.filter(b=>grouped[b]);
-    const extras=Object.keys(grouped).filter(b=>!BRANCHES.includes(b));
-    const allBranches=[...ordered,...extras];
-    const children=[];
-    const mkP=(text,size,bold,color,after=80)=>new Paragraph({alignment:AlignmentType.CENTER,spacing:{before:0,after},children:[new TextRun({text,bold,size,font:"Traditional Arabic",color})]});
-    children.push(mkP("شركة عصر الشرق لإدارة المطاعم",32,true,"4a2c00",60));
-    children.push(mkP("قسم خدمة العملاء",26,true,"6b3f00",60));
-    children.push(mkP(dateStr,24,true,"333333",120));
-    children.push(new Paragraph({border:{bottom:{style:BorderStyle.SINGLE,size:8,color:"8B6914",space:1}},spacing:{before:0,after:180},children:[]}));
-    const TW=8504, colW=[1600,3004,2000,1900];
-    const mkH=(text,w)=>new TableCell({borders:hBorders,width:{size:w,type:WidthType.DXA},shading:{fill:"F5DEB3",type:ShadingType.CLEAR},verticalAlign:VerticalAlign.CENTER,margins:{top:80,bottom:80,left:120,right:120},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text,bold:true,size:20,font:"Traditional Arabic",color:"3d2000"})]})]});
-    const mkC=(text,w)=>new TableCell({borders,width:{size:w,type:WidthType.DXA},verticalAlign:VerticalAlign.CENTER,margins:{top:60,bottom:60,left:100,right:100},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:String(text||''),size:18,font:"Traditional Arabic"})]})]});
-    if(!allBranches.length) children.push(mkP("لا توجد إلغاءات لهذا اليوم",24,false,"888888"));
+ات لهذا اليوم",24,false,"888888"));
     allBranches.forEach(branch=>{
       const rows=grouped[branch]||[];
       const tableRows=[new TableRow({children:[mkH("رقم الاوردر",colW[0]),mkH(`إلغاء فرع ${branch}`,colW[1]),mkH("الرقم",colW[2]),mkH("الحالة",colW[3])]})];
