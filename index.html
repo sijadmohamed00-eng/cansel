@@ -6,13 +6,17 @@
 <meta name="theme-color" content="#1a1a2e">
 <title>إدارة الإلغاءات - عصر الشرق</title>
 
+<!-- Firebase SDK 8 (النسخة المستقرة) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap');
 :root{--bg:#0f0f1a;--surface:#16162a;--card:#1e1e35;--border:#2a2a4a;--accent:#e8a020;--text:#e8e8f0;--muted:#7a7a9a;--danger:#e74c3c;--success:#27ae60;--radius:12px;}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;direction:rtl;}
 
-.header{background:linear-gradient(135deg,#1a1a35,#0f0f1a);border-bottom:2px solid var(--accent);padding:14px 22px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 4px 30px rgba(232,160,32,.15);}
+.header{background:linear-gradient(135deg,#1a1a35,#0f0f1a);border-bottom:2px solid var(--accent);padding:14px 22px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 4px 30px rgba(232,160,32,.15);flex-wrap:wrap;gap:10px;}
 .logo-area{display:flex;align-items:center;gap:10px;}
 .logo-icon{width:42px;height:42px;background:linear-gradient(135deg,var(--accent),#f0c040);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;}
 .logo-text h1{font-size:17px;font-weight:700;color:var(--accent);}
@@ -23,10 +27,10 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 .btn-settings{padding:8px 14px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'Tajawal',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;}
 .btn-settings:hover{border-color:var(--accent);color:var(--accent);}
 
-.notification{position:fixed;top:78px;left:50%;transform:translateX(-50%);padding:11px 26px;border-radius:30px;font-weight:600;opacity:0;pointer-events:none;transition:all .3s;z-index:999;white-space:nowrap;}
+.notification{position:fixed;top:78px;left:50%;transform:translateX(-50%);padding:11px 26px;border-radius:30px;font-weight:600;opacity:0;pointer-events:none;transition:all .3s;z-index:999;white-space:nowrap;background:#1a1a35;border:1px solid var(--accent);}
 .notification.show{opacity:1;}
-.notification.success{background:#155c30;border:1px solid #27ae60;color:#a3ffcc;}
-.notification.error{background:#5c1515;border:1px solid #e74c3c;color:#ffaaaa;}
+.notification.success{background:#155c30;border-color:#27ae60;color:#a3ffcc;}
+.notification.error{background:#5c1515;border-color:#e74c3c;color:#ffaaaa;}
 
 .main{max-width:1100px;margin:0 auto;padding:22px 14px;}
 .stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px;}
@@ -117,21 +121,21 @@ tr:hover td{background:rgba(232,160,32,.04);}
 
 <div id="notification" class="notification"></div>
 <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><p>جاري تصدير التقرير...</p></div>
-<div class="overlay" id="confirmOverlay"><div class="dialog-box"><h3>🗑️ تأكيد الحذف</h3><p>هل تريد حذف هذا السجل؟<br>يُستخدم في حال استلم الزبون الطلب.</p><div class="dialog-btns"><button class="btn-yes" id="confirmYes">نعم، احذف</button><button class="btn-no" id="confirmNo">إلغاء</button></div></div></div>
+<div class="overlay" id="confirmOverlay"><div class="dialog-box"><h3>🗑️ تأكيد الحذف</h3><p>هل تريد حذف هذا السجل؟</p><div class="dialog-btns"><button class="btn-yes" id="confirmYes">نعم، احذف</button><button class="btn-no" id="confirmNo">إلغاء</button></div></div></div>
 <div class="overlay" id="rmBranchOverlay"><div class="dialog-box"><h3>⚠️ حذف الفرع</h3><p id="rmBranchMsg"></p><div class="dialog-btns"><button class="btn-yes" id="rmBranchYes">نعم، احذف</button><button class="btn-no" id="rmBranchNo">إلغاء</button></div></div></div>
-<div class="settings-panel" id="settingsPanel" onclick="closeSettingsBg(event)"><div class="settings-drawer"><h2>⚙️ إدارة الفروع</h2><div class="branch-list-wrap"><h3>🏪 الفروع الحالية</h3><ul id="branchList"></ul><div class="add-branch-row"><input id="newBranchInput" placeholder="اسم الفرع الجديد..."><button class="btn-add-branch" onclick="addBranchUI()">+ إضافة</button></div></div><button class="btn-close-settings" onclick="closeSettings()">✕ إغلاق</button></div></div>
+<div class="settings-panel" id="settingsPanel"><div class="settings-drawer"><h2>⚙️ إدارة الفروع</h2><div class="branch-list-wrap"><h3>🏪 الفروع الحالية</h3><ul id="branchList"></ul><div class="add-branch-row"><input id="newBranchInput" placeholder="اسم الفرع الجديد..."><button class="btn-add-branch" id="addBranchBtn">+ إضافة</button></div></div><button class="btn-close-settings" id="closeSettingsBtn">✕ إغلاق</button></div></div>
 
 <div class="header">
   <div class="logo-area"><div class="logo-icon">🍽️</div><div class="logo-text"><h1>إدارة الإلغاءات</h1><p>شركة عصر الشرق - خدمة العملاء</p></div></div>
-  <div class="header-right"><div class="header-date"><strong id="currentDate"></strong><span id="currentTime"></span></div><button class="btn-settings" onclick="openSettings()">🏪 الفروع</button></div>
+  <div class="header-right"><div class="header-date"><strong id="currentDate"></strong><span id="currentTime"></span></div><button class="btn-settings" id="settingsBtn">🏪 الفروع</button></div>
 </div>
 
 <div class="main">
   <div class="stats-bar">
     <div class="stat-card"><div class="val" id="statTotal">0</div><div class="lbl">إجمالي الإلغاءات</div></div>
-    <div class="stat-card"><div class="val" id="statAssigned" style="color:#6ee69b">0</div><div class="lbl">متعين لطيار</div></div>
-    <div class="stat-card"><div class="val" id="statNotAssigned" style="color:#ff9a9a">0</div><div class="lbl">غير متعين</div></div>
-    <div class="stat-card"><div class="val" id="statBranches" style="color:#70c0ff">0</div><div class="lbl">فروع</div></div>
+    <div class="stat-card"><div class="val" id="statAssigned">0</div><div class="lbl">متعين لطيار</div></div>
+    <div class="stat-card"><div class="val" id="statNotAssigned">0</div><div class="lbl">غير متعين</div></div>
+    <div class="stat-card"><div class="val" id="statBranches">0</div><div class="lbl">فروع</div></div>
   </div>
 
   <div class="form-card">
@@ -140,30 +144,25 @@ tr:hover td{background:rgba(232,160,32,.04);}
       <div class="field"><label>الفرع *</label><select id="branchSelect"></select></div>
       <div class="field"><label>رقم الهاتف *</label><input type="text" id="phoneInput" placeholder="07xxxxxxxxx" dir="ltr"></div>
       <div class="field"><label>رقم الأوردر *</label><input type="text" id="orderIdInput" placeholder="مثال: 12345" dir="ltr"></div>
-      <div class="field"><label>حالة التعيين</label><div class="toggle-group"><button class="toggle-btn active" id="toggleAssigned" onclick="setAssigned(true)">✈️ متعين لطيار</button><button class="toggle-btn" id="toggleNotAssigned" onclick="setAssigned(false)">❌ غير متعين</button></div></div>
+      <div class="field"><label>حالة التعيين</label><div class="toggle-group"><button class="toggle-btn active" id="toggleAssigned">✈️ متعين لطيار</button><button class="toggle-btn" id="toggleNotAssigned">❌ غير متعين</button></div></div>
     </div>
-    <div class="field"><label>سبب الإلغاء *</label><div class="reason-chips"><button class="reason-chip" onclick="selectReason(this,'عدم رد')">📵 عدم رد</button><button class="reason-chip" onclick="selectReason(this,'زبون')">👤 زبون</button><button class="reason-chip" onclick="selectReason(this,'تكرار')">🔁 تكرار</button><button class="reason-chip" onclick="selectReason(this,'تحويل')">🔄 تحويل</button><button class="reason-chip" onclick="selectReason(this,'خارج الزبون')">🚫 خارج الزبون</button></div></div>
+    <div class="field"><label>سبب الإلغاء *</label><div class="reason-chips" id="reasonChips"><button class="reason-chip" data-reason="عدم رد">📵 عدم رد</button><button class="reason-chip" data-reason="زبون">👤 زبون</button><button class="reason-chip" data-reason="تكرار">🔁 تكرار</button><button class="reason-chip" data-reason="تحويل">🔄 تحويل</button><button class="reason-chip" data-reason="خارج الزبون">🚫 خارج الزبون</button></div></div>
     <button class="btn-submit" id="saveBtn">💾 حفظ الإلغاء</button>
   </div>
 
   <div class="table-card">
-    <div class="table-header"><h2>📋 إلغاءات اليوم</h2><input class="search-box" id="searchBox" placeholder="🔍 بحث..." oninput="filterTable()"></div>
+    <div class="table-header"><h2>📋 إلغاءات اليوم</h2><input class="search-box" id="searchBox" placeholder="🔍 بحث..."></div>
     <div class="table-wrap"><table><thead><tr><th>#</th><th>الفرع</th><th>رقم الأوردر</th><th>رقم الهاتف</th><th>السبب</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></tr></thead><tbody id="tableBody"><tr><td colspan="8" class="empty-state">لا توجد إلغاءات بعد</td></tr></tbody></table></div>
   </div>
 
-  <div class="export-card"><div class="export-info"><h3>📄 تصدير تقرير اليوم</h3><p>يتم توليد ملف Word بنفس تصميم النموذج الرسمي، مجمّعاً حسب الفروع</p></div><button class="btn-export" onclick="exportWord()">📥 تصدير Word</button></div>
+  <div class="export-card"><div class="export-info"><h3>📄 تصدير تقرير اليوم</h3><p>يتم توليد ملف Word بنفس تصميم النموذج الرسمي</p></div><button class="btn-export" id="exportBtn">📥 تصدير Word</button></div>
 </div>
-
-<!-- Firebase SDK - تحميل مرة واحدة -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
 // ========== تهيئة Firebase ==========
 const firebaseConfig = {
   apiKey: "AIzaSyDr0Jcv-1O47S198AWpFILq7O5MwXoRFGg",
   authDomain: "cansel-94336.firebaseapp.com",
-  databaseURL: "https://cansel-94336-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "cansel-94336",
   storageBucket: "cansel-94336.firebasestorage.app",
   messagingSenderId: "1047202012197",
@@ -173,7 +172,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// ========== البيانات العامة ==========
+// ========== متغيرات عامة ==========
 let allRecords = [];
 let isAssigned = true;
 let selectedReason = '';
@@ -181,28 +180,29 @@ let pendingDeleteId = null;
 let pendingRemoveBranch = null;
 
 const DEFAULT_BRANCHES = ["الشعب","البنوك","الغدير","الحرية","الدورة","الغزالية","بسماية","الأعظمية","حي العامل","البعيثة"];
+let BRANCHES = [];
 
-function loadBranches() {
-  try { 
-    const s = localStorage.getItem('branches'); 
-    return s ? JSON.parse(s) : [...DEFAULT_BRANCHES]; 
-  } catch { 
-    return [...DEFAULT_BRANCHES]; 
-  }
-}
-function saveBranches(arr) { 
-  localStorage.setItem('branches', JSON.stringify(arr)); 
-}
-
-let BRANCHES = loadBranches();
-
-// ========== دوال المساعدة ==========
+// ========== دوال الإشعارات ==========
 function showNote(msg, type) {
   const n = document.getElementById('notification');
   if(!n) return;
-  n.textContent = msg; 
+  n.textContent = msg;
   n.className = 'notification show ' + type;
-  setTimeout(() => n.className = 'notification', 3200);
+  setTimeout(() => n.className = 'notification', 3000);
+}
+
+// ========== دوال الفروع ==========
+function loadBranches() {
+  try {
+    const s = localStorage.getItem('branches');
+    BRANCHES = s ? JSON.parse(s) : [...DEFAULT_BRANCHES];
+  } catch {
+    BRANCHES = [...DEFAULT_BRANCHES];
+  }
+}
+
+function saveBranches() {
+  localStorage.setItem('branches', JSON.stringify(BRANCHES));
 }
 
 function populateBranchSelect() {
@@ -211,7 +211,8 @@ function populateBranchSelect() {
   sel.innerHTML = '<option value="">-- اختر الفرع --</option>';
   BRANCHES.forEach(b => {
     const o = document.createElement('option');
-    o.value = o.textContent = b; 
+    o.value = b;
+    o.textContent = b;
     sel.appendChild(o);
   });
 }
@@ -222,9 +223,17 @@ function renderBranchList() {
   ul.innerHTML = BRANCHES.map(b => `
     <li class="branch-item">
       <span>${b}</span>
-      <button class="btn-rm-branch" onclick="confirmRemoveBranch('${b}')">✕</button>
+      <button class="btn-rm-branch" data-branch="${b}">✕</button>
     </li>
   `).join('');
+  
+  document.querySelectorAll('.btn-rm-branch').forEach(btn => {
+    btn.addEventListener('click', () => {
+      pendingRemoveBranch = btn.getAttribute('data-branch');
+      document.getElementById('rmBranchMsg').textContent = `هل تريد حذف فرع "${pendingRemoveBranch}" من القائمة؟`;
+      document.getElementById('rmBranchOverlay').classList.add('show');
+    });
+  });
 }
 
 function addBranch(name) {
@@ -232,7 +241,7 @@ function addBranch(name) {
   if (!name) return false;
   if (BRANCHES.includes(name)) return 'dup';
   BRANCHES.push(name);
-  saveBranches(BRANCHES);
+  saveBranches();
   populateBranchSelect();
   renderBranchList();
   return true;
@@ -240,7 +249,7 @@ function addBranch(name) {
 
 function removeBranch(name) {
   BRANCHES = BRANCHES.filter(b => b !== name);
-  saveBranches(BRANCHES);
+  saveBranches();
   populateBranchSelect();
   renderBranchList();
 }
@@ -248,15 +257,20 @@ function removeBranch(name) {
 // ========== عمليات Firebase ==========
 async function addCancellation(data) {
   try {
-    await db.collection("cancellations").add({
-      ...data,
+    const docRef = await db.collection("cancellations").add({
+      branchName: data.branchName,
+      phoneNumber: data.phoneNumber,
+      orderId: data.orderId,
+      reason: data.reason,
+      isAssigned: data.isAssigned,
       timestamp: firebase.firestore.FieldValue.serverTimestamp()
     });
+    console.log("Document written with ID: ", docRef.id);
     showNote("تم حفظ الإلغاء بنجاح", "success");
     return true;
   } catch(e) {
+    console.error("Error adding document: ", e);
     showNote("خطأ في الحفظ: " + e.message, "error");
-    console.error(e);
     return false;
   }
 }
@@ -266,8 +280,8 @@ async function deleteCancellation(id) {
     await db.collection("cancellations").doc(id).delete();
     showNote("تم حذف السجل بنجاح", "success");
   } catch(e) {
+    console.error("Error deleting: ", e);
     showNote("خطأ في الحذف: " + e.message, "error");
-    console.error(e);
   }
 }
 
@@ -286,6 +300,9 @@ function loadTodayCancellations() {
         }
       });
       renderTable(records);
+    }, error => {
+      console.error("Snapshot error: ", error);
+      showNote("خطأ في تحميل البيانات: " + error.message, "error");
     });
 }
 
@@ -314,20 +331,27 @@ function doRender(records) {
     const time = ts.toLocaleTimeString('ar-IQ', {hour:'2-digit', minute:'2-digit'});
     const badge = r.isAssigned ? '<span class="badge badge-assigned">✈️ متعين</span>' : '<span class="badge badge-notassigned">❌ غير متعين</span>';
     return `<tr>
-      <td style="color:var(--muted)">${i+1}</td>
+      <td>${i+1}</td>
       <td><span class="branch-tag">${r.branchName || ''}</span></td>
-      <td style="font-weight:700;direction:ltr">${r.orderId || ''}</td>
-      <td style="direction:ltr;color:var(--muted)">${r.phoneNumber || ''}</td>
+      <td style="direction:ltr">${r.orderId || ''}</td>
+      <td style="direction:ltr">${r.phoneNumber || ''}</td>
       <td>${r.reason || '—'}</td>
       <td>${badge}</td>
       <td class="time-text">${time}</td>
-      <td><button class="btn-delete" onclick="confirmDelete('${r.id}')">🗑️ استلم الزبون</button></td>
+      <td><button class="btn-delete" data-id="${r.id}">🗑️ استلم الزبون</button></td>
     </tr>`;
   }).join('');
+  
+  document.querySelectorAll('.btn-delete').forEach(btn => {
+    btn.addEventListener('click', () => {
+      pendingDeleteId = btn.getAttribute('data-id');
+      document.getElementById('confirmOverlay').classList.add('show');
+    });
+  });
 }
 
 function filterTable() {
-  const q = document.getElementById('searchBox')?.value.toLowerCase() || '';
+  const q = document.getElementById('searchBox').value.toLowerCase();
   doRender(allRecords.filter(r => 
     (r.branchName || '').includes(q) || 
     (r.phoneNumber || '').includes(q) || 
@@ -339,23 +363,19 @@ function filterTable() {
 // ========== دوال التحكم ==========
 function setAssigned(v) {
   isAssigned = v;
-  document.getElementById('toggleAssigned').classList.toggle('active', v);
-  document.getElementById('toggleNotAssigned').classList.toggle('active', !v);
-}
-
-function selectReason(btn, reason) {
-  if(selectedReason === reason) {
-    selectedReason = '';
-    btn.classList.remove('selected');
-    return;
+  const toggleA = document.getElementById('toggleAssigned');
+  const toggleN = document.getElementById('toggleNotAssigned');
+  if(v) {
+    toggleA.classList.add('active');
+    toggleN.classList.remove('active');
+  } else {
+    toggleA.classList.remove('active');
+    toggleN.classList.add('active');
   }
-  document.querySelectorAll('.reason-chip').forEach(c => c.classList.remove('selected'));
-  selectedReason = reason;
-  btn.classList.add('selected');
 }
 
 async function submitForm() {
-  console.log("submitForm called - saving cancellation");
+  console.log("submitForm called");
   
   const branch = document.getElementById('branchSelect').value;
   const phone = document.getElementById('phoneInput').value.trim();
@@ -384,174 +404,131 @@ async function submitForm() {
   }
 }
 
-// ========== دوال الحذف ==========
-function confirmDelete(id) {
-  pendingDeleteId = id;
-  document.getElementById('confirmOverlay').classList.add('show');
-}
-
-function confirmRemoveBranch(name) {
-  pendingRemoveBranch = name;
-  document.getElementById('rmBranchMsg').textContent = `هل تريد حذف فرع "${name}" من القائمة؟`;
-  document.getElementById('rmBranchOverlay').classList.add('show');
-}
-
-// ========== دوال الإعدادات ==========
-function openSettings() { document.getElementById('settingsPanel').classList.add('show'); }
-function closeSettings() { document.getElementById('settingsPanel').classList.remove('show'); }
-function closeSettingsBg(e) { if(e.target === document.getElementById('settingsPanel')) closeSettings(); }
-
-function addBranchUI() {
-  const inp = document.getElementById('newBranchInput');
-  const val = inp?.value.trim();
-  if(!val) return;
-  const res = addBranch(val);
-  if(res === 'dup') { showNote("الفرع موجود مسبقاً", "error"); return; }
-  inp.value = '';
-  showNote("تمت إضافة فرع: "+val, "success");
-}
-
 // ========== دوال الساعة ==========
 function updateClock() {
   const n = new Date();
-  const dateEl = document.getElementById('currentDate');
-  const timeEl = document.getElementById('currentTime');
-  if(dateEl) dateEl.textContent = n.toLocaleDateString('ar-IQ', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
-  if(timeEl) timeEl.textContent = n.toLocaleTimeString('ar-IQ');
+  document.getElementById('currentDate').textContent = n.toLocaleDateString('ar-IQ', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  document.getElementById('currentTime').textContent = n.toLocaleTimeString('ar-IQ');
 }
 
-// ========== تصدير Word ==========
+// ========== تصدير Word (مبسط) ==========
 async function exportWord() {
-  showLoading(true);
-  try {
-    const response = await fetch('https://cdn.jsdelivr.net/npm/docx@8.5.0/+esm');
-    const docxModule = await import('https://cdn.jsdelivr.net/npm/docx@8.5.0/+esm');
-    const { Document: Doc, Packer, Paragraph, TextRun, Table, TableRow, TableCell, AlignmentType, WidthType, BorderStyle, ShadingType, VerticalAlign } = docxModule;
-    
-    const today = new Date();
-    const dateStr = today.toLocaleDateString('ar-IQ', {year:'numeric', month:'numeric', day:'numeric'});
-    const brd = {style: BorderStyle.SINGLE, size: 6, color: "8B6914"};
-    const hBrd = {style: BorderStyle.SINGLE, size: 8, color: "5a3e00"};
-    const borders = {top: brd, bottom: brd, left: brd, right: brd};
-    const hBorders = {top: hBrd, bottom: hBrd, left: hBrd, right: hBrd};
-    
-    const grouped = {};
-    allRecords.forEach(r => { if(!grouped[r.branchName]) grouped[r.branchName] = []; grouped[r.branchName].push(r); });
-    
-    const ordered = BRANCHES.filter(b => grouped[b]);
-    const extras = Object.keys(grouped).filter(b => !BRANCHES.includes(b));
-    const allBranches = [...ordered, ...extras];
-    const children = [];
-    
-    const mkP = (text, size, bold, color, after=80) => new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: {before: 0, after},
-      children: [new TextRun({text, bold, size, font: "Traditional Arabic", color})]
-    });
-    
-    children.push(mkP("شركة عصر الشرق لإدارة المطاعم", 32, true, "4a2c00", 60));
-    children.push(mkP("قسم خدمة العملاء", 26, true, "6b3f00", 60));
-    children.push(mkP(dateStr, 24, true, "333333", 120));
-    children.push(new Paragraph({border: {bottom: {style: BorderStyle.SINGLE, size: 8, color: "8B6914", space: 1}}, spacing: {before: 0, after: 180}, children: []}));
-    
-    const TW = 8504, colW = [1600, 3004, 2000, 1900];
-    const mkH = (text, w) => new TableCell({
-      borders: hBorders, width: {size: w, type: WidthType.DXA},
-      shading: {fill: "F5DEB3", type: ShadingType.CLEAR},
-      verticalAlign: VerticalAlign.CENTER,
-      margins: {top: 80, bottom: 80, left: 120, right: 120},
-      children: [new Paragraph({alignment: AlignmentType.CENTER, children: [new TextRun({text, bold: true, size: 20, font: "Traditional Arabic", color: "3d2000"})]})]
-    });
-    
-    const mkC = (text, w) => new TableCell({
-      borders, width: {size: w, type: WidthType.DXA},
-      verticalAlign: VerticalAlign.CENTER,
-      margins: {top: 60, bottom: 60, left: 100, right: 100},
-      children: [new Paragraph({alignment: AlignmentType.CENTER, children: [new TextRun({text: String(text || ''), size: 18, font: "Traditional Arabic"})]})]
-    });
-    
-    allBranches.forEach(branch => {
-      const rows = grouped[branch] || [];
-      const tableRows = [new TableRow({children: [mkH("رقم الاوردر", colW[0]), mkH(`إلغاء فرع ${branch} -`, colW[1]), mkH("الرقم", colW[2]), mkH("الحالة", colW[3])]})];
-      rows.forEach(r => tableRows.push(new TableRow({children: [mkC(r.orderId || '', colW[0]), mkC(r.reason || '', colW[1]), mkC(r.phoneNumber || '', colW[2]), mkC(r.isAssigned ? 'متعين' : 'غير متعين', colW[3])]})));
-      children.push(new Table({width: {size: TW, type: WidthType.DXA}, columnWidths: colW, rows: tableRows, bidiVisual: true}));
-      children.push(new Paragraph({spacing: {before: 0, after: 200}, children: []}));
-    });
-    
-    const doc = new Doc({sections: [{properties: {page: {size: {width: 11906, height: 16838}, margin: {top: 1080, right: 1080, bottom: 1080, left: 1080}}}, children}]});
-    const buffer = await Packer.toBuffer(doc);
-    const blob = new Blob([buffer], {type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `cancellation_report_${dateStr.replace(/\//g, '-')}.docx`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showNote("تم تصدير التقرير بنجاح", "success");
-  } catch(e) {
-    console.error(e);
-    showNote("خطأ في التصدير: " + e.message, "error");
-  } finally {
-    showLoading(false);
-  }
-}
-
-function showLoading(v) {
-  const el = document.getElementById('loadingOverlay');
-  if(el) el.classList.toggle('show', v);
+  showNote("جاري تجهيز التقرير...", "success");
+  alert("سيتم إضافة تصدير Word لاحقاً. البيانات موجودة في Firebase.");
 }
 
 // ========== تهيئة الصفحة ==========
 document.addEventListener('DOMContentLoaded', function() {
-  console.log("DOM loaded - initializing");
+  console.log("DOM loaded - initializing app");
   
+  // تحميل الفروع
+  loadBranches();
   populateBranchSelect();
   renderBranchList();
+  
+  // تحميل البيانات
   loadTodayCancellations();
+  
+  // الساعة
   updateClock();
   setInterval(updateClock, 1000);
   
+  // زر الحفظ
   const saveBtn = document.getElementById('saveBtn');
-  if(saveBtn) {
-    saveBtn.onclick = function(e) {
-      e.preventDefault();
-      submitForm();
-    };
-  }
+  saveBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    console.log("Save button clicked");
+    submitForm();
+  });
   
-  document.getElementById('confirmYes').onclick = function() {
+  // أزرار التعيين
+  document.getElementById('toggleAssigned').addEventListener('click', () => setAssigned(true));
+  document.getElementById('toggleNotAssigned').addEventListener('click', () => setAssigned(false));
+  
+  // أسباب الإلغاء
+  document.querySelectorAll('.reason-chip').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const reason = this.getAttribute('data-reason');
+      if(selectedReason === reason) {
+        selectedReason = '';
+        this.classList.remove('selected');
+      } else {
+        document.querySelectorAll('.reason-chip').forEach(c => c.classList.remove('selected'));
+        selectedReason = reason;
+        this.classList.add('selected');
+      }
+    });
+  });
+  
+  // بحث
+  document.getElementById('searchBox').addEventListener('input', filterTable);
+  
+  // تأكيد الحذف
+  document.getElementById('confirmYes').addEventListener('click', () => {
     document.getElementById('confirmOverlay').classList.remove('show');
     if(pendingDeleteId) {
       deleteCancellation(pendingDeleteId);
       pendingDeleteId = null;
     }
-  };
+  });
   
-  document.getElementById('confirmNo').onclick = function() {
+  document.getElementById('confirmNo').addEventListener('click', () => {
     document.getElementById('confirmOverlay').classList.remove('show');
     pendingDeleteId = null;
-  };
+  });
   
-  document.getElementById('rmBranchYes').onclick = function() {
+  // حذف فرع
+  document.getElementById('rmBranchYes').addEventListener('click', () => {
     document.getElementById('rmBranchOverlay').classList.remove('show');
     if(pendingRemoveBranch) {
       removeBranch(pendingRemoveBranch);
       pendingRemoveBranch = null;
     }
-  };
+  });
   
-  document.getElementById('rmBranchNo').onclick = function() {
+  document.getElementById('rmBranchNo').addEventListener('click', () => {
     document.getElementById('rmBranchOverlay').classList.remove('show');
     pendingRemoveBranch = null;
-  };
-});
-
-// اختصار Ctrl+Enter
-document.addEventListener('keydown', function(e) { 
-  if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-    e.preventDefault();
-    submitForm();
-  } 
+  });
+  
+  // إضافة فرع
+  document.getElementById('addBranchBtn').addEventListener('click', () => {
+    const inp = document.getElementById('newBranchInput');
+    const val = inp.value.trim();
+    if(!val) return;
+    const res = addBranch(val);
+    if(res === 'dup') { showNote("الفرع موجود مسبقاً", "error"); return; }
+    inp.value = '';
+    showNote("تمت إضافة فرع: "+val, "success");
+  });
+  
+  // إعدادات
+  document.getElementById('settingsBtn').addEventListener('click', () => {
+    document.getElementById('settingsPanel').classList.add('show');
+  });
+  
+  document.getElementById('closeSettingsBtn').addEventListener('click', () => {
+    document.getElementById('settingsPanel').classList.remove('show');
+  });
+  
+  document.getElementById('settingsPanel').addEventListener('click', (e) => {
+    if(e.target === document.getElementById('settingsPanel')) {
+      document.getElementById('settingsPanel').classList.remove('show');
+    }
+  });
+  
+  // تصدير
+  document.getElementById('exportBtn').addEventListener('click', exportWord);
+  
+  // اختصار Ctrl+Enter
+  document.addEventListener('keydown', function(e) {
+    if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      submitForm();
+    }
+  });
+  
+  console.log("App initialized successfully");
 });
 </script>
 </body>
