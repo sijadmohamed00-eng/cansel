@@ -6,140 +6,6 @@
 <meta name="theme-color" content="#1a1a2e">
 <title>إدارة الإلغاءات - عصر الشرق</title>
 
-<!-- Firebase SDK -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot,
-           query, orderBy, serverTimestamp, Timestamp }
-    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-  const firebaseConfig = {
-    apiKey:            "AIzaSyDr0Jcv-1O47S198AWpFILq7O5MwXoRFGg",
-    authDomain:        "cansel-94336.firebaseapp.com",
-    databaseURL:       "https://cansel-94336-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId:         "cansel-94336",
-    storageBucket:     "cansel-94336.firebasestorage.app",
-    messagingSenderId: "1047202012197",
-    appId:             "1:1047202012197:web:715a3232395ce1cd99f3cc"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db  = getFirestore(app);
-
-  const DEFAULT_BRANCHES = [
-    "الشعب","البنوك","الغدير","الحرية","الدورة",
-    "الغزالية","بسماية","الأعظمية","حي العامل","البعيثة"
-  ];
-
-  function loadBranches() {
-    try { const s=localStorage.getItem('branches'); return s?JSON.parse(s):[...DEFAULT_BRANCHES]; }
-    catch { return [...DEFAULT_BRANCHES]; }
-  }
-  function saveBranches(arr) { localStorage.setItem('branches',JSON.stringify(arr)); }
-
-  window.BRANCHES = loadBranches();
-
-  window.addBranch = function(name) {
-    name = name.trim();
-    if (!name) return false;
-    if (window.BRANCHES.includes(name)) return 'dup';
-    window.BRANCHES.push(name);
-    saveBranches(window.BRANCHES);
-    if(window.populateBranchSelect) window.populateBranchSelect();
-    if(window.renderBranchList) window.renderBranchList();
-    return true;
-  };
-
-  window.removeBranch = function(name) {
-    window.BRANCHES = window.BRANCHES.filter(b=>b!==name);
-    saveBranches(window.BRANCHES);
-    if(window.populateBranchSelect) window.populateBranchSelect();
-    if(window.renderBranchList) window.renderBranchList();
-  };
-
-  function loadTodayCancellations() {
-    const today = new Date(); today.setHours(0,0,0,0);
-    const q = query(collection(db,"cancellations"),orderBy("timestamp","desc"));
-    onSnapshot(q, snap => {
-      const records=[];
-      snap.forEach(d=>{
-        const data=d.data();
-        if(data.timestamp&&data.timestamp.toDate()>=today)
-          records.push({id:d.id,...data});
-      });
-      if(window.renderTable) window.renderTable(records);
-    });
-  }
-
-  window.addCancellation = async function(data) {
-    try { 
-      await addDoc(collection(db,"cancellations"),{...data,timestamp:serverTimestamp()}); 
-      if(window.notify) window.notify("تم حفظ الإلغاء بنجاح","success");
-      return true; 
-    }
-    catch(e) { 
-      if(window.notify) window.notify("خطأ في الحفظ: "+e.message,"error"); 
-      return false; 
-    }
-  };
-
-  window.deleteCancellation = async function(id) {
-    try { 
-      await deleteDoc(doc(db,"cancellations",id)); 
-      if(window.notify) window.notify("تم حذف السجل بنجاح","success");
-    }
-    catch { 
-      if(window.notify) window.notify("خطأ في الحذف","error"); 
-    }
-  };
-
-  window.notify = function(msg,type) {
-    const n=document.getElementById('notification');
-    if(!n) return;
-    n.textContent=msg; n.className='notification show '+type;
-    setTimeout(()=>n.className='notification',3200);
-  };
-
-  window.showNote = window.notify;
-
-  window.populateBranchSelect = function() {
-    const sel=document.getElementById('branchSelect');
-    if(!sel) return;
-    sel.innerHTML='<option value="">-- اختر الفرع --</option>';
-    window.BRANCHES.forEach(b=>{
-      const o=document.createElement('option');
-      o.value=o.textContent=b; sel.appendChild(o);
-    });
-  };
-
-  window.renderBranchList = function() {
-    const ul=document.getElementById('branchList');
-    if(!ul) return;
-    ul.innerHTML=window.BRANCHES.map(b=>`
-      <li class="branch-item">
-        <span>${b}</span>
-        <button class="btn-rm-branch" onclick="window.confirmRemoveBranch('${b}')">✕</button>
-      </li>`).join('');
-  };
-
-  loadTodayCancellations();
-  window.populateBranchSelect();
-  window.renderBranchList();
-</script>
-
-<script type="module">
-window.docxLib = null;
-async function loadDocx(){
-  if(window.docxLib)return window.docxLib;
-  const urls=['https://cdn.jsdelivr.net/npm/docx@8.5.0/+esm','https://unpkg.com/docx@8.5.0/+esm'];
-  for(const url of urls){
-    try{ const m=await import(url); window.docxLib=m.default||m; return window.docxLib; }catch{}
-  }
-  return null;
-}
-window.loadDocx = loadDocx;
-</script>
-
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap');
 :root{--bg:#0f0f1a;--surface:#16162a;--card:#1e1e35;--border:#2a2a4a;--accent:#e8a020;--text:#e8e8f0;--muted:#7a7a9a;--danger:#e74c3c;--success:#27ae60;--radius:12px;}
@@ -250,68 +116,17 @@ tr:hover td{background:rgba(232,160,32,.04);}
 <body>
 
 <div id="notification" class="notification"></div>
-
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="spinner"></div>
-  <p style="color:var(--muted)">جاري تصدير التقرير...</p>
-</div>
-
-<div class="overlay" id="confirmOverlay">
-  <div class="dialog-box" style="text-align:center">
-    <h3>🗑️ تأكيد الحذف</h3>
-    <p>هل تريد حذف هذا السجل؟<br>يُستخدم في حال استلم الزبون الطلب.</p>
-    <div class="dialog-btns">
-      <button class="btn-yes" id="confirmYes">نعم، احذف</button>
-      <button class="btn-no"  id="confirmNo">إلغاء</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="rmBranchOverlay">
-  <div class="dialog-box" style="text-align:center">
-    <h3>⚠️ حذف الفرع</h3>
-    <p id="rmBranchMsg"></p>
-    <div class="dialog-btns">
-      <button class="btn-yes" id="rmBranchYes">نعم، احذف</button>
-      <button class="btn-no"  id="rmBranchNo">إلغاء</button>
-    </div>
-  </div>
-</div>
-
-<div class="settings-panel" id="settingsPanel" onclick="window.closeSettingsBg(event)">
-  <div class="settings-drawer" id="settingsDrawer">
-    <h2>⚙️ إدارة الفروع</h2>
-    <div class="branch-list-wrap">
-      <h3>🏪 الفروع الحالية</h3>
-      <ul id="branchList"></ul>
-      <div class="add-branch-row">
-        <input id="newBranchInput" placeholder="اسم الفرع الجديد..." onkeydown="if(event.key==='Enter')window.addBranchUI()">
-        <button class="btn-add-branch" onclick="window.addBranchUI()">+ إضافة</button>
-      </div>
-    </div>
-    <button class="btn-close-settings" onclick="window.closeSettings()">✕ إغلاق</button>
-  </div>
-</div>
+<div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><p>جاري تصدير التقرير...</p></div>
+<div class="overlay" id="confirmOverlay"><div class="dialog-box"><h3>🗑️ تأكيد الحذف</h3><p>هل تريد حذف هذا السجل؟<br>يُستخدم في حال استلم الزبون الطلب.</p><div class="dialog-btns"><button class="btn-yes" id="confirmYes">نعم، احذف</button><button class="btn-no" id="confirmNo">إلغاء</button></div></div></div>
+<div class="overlay" id="rmBranchOverlay"><div class="dialog-box"><h3>⚠️ حذف الفرع</h3><p id="rmBranchMsg"></p><div class="dialog-btns"><button class="btn-yes" id="rmBranchYes">نعم، احذف</button><button class="btn-no" id="rmBranchNo">إلغاء</button></div></div></div>
+<div class="settings-panel" id="settingsPanel" onclick="closeSettingsBg(event)"><div class="settings-drawer"><h2>⚙️ إدارة الفروع</h2><div class="branch-list-wrap"><h3>🏪 الفروع الحالية</h3><ul id="branchList"></ul><div class="add-branch-row"><input id="newBranchInput" placeholder="اسم الفرع الجديد..."><button class="btn-add-branch" onclick="addBranchUI()">+ إضافة</button></div></div><button class="btn-close-settings" onclick="closeSettings()">✕ إغلاق</button></div></div>
 
 <div class="header">
-  <div class="logo-area">
-    <div class="logo-icon">🍽️</div>
-    <div class="logo-text">
-      <h1>إدارة الإلغاءات</h1>
-      <p>شركة عصر الشرق - خدمة العملاء</p>
-    </div>
-  </div>
-  <div class="header-right">
-    <div class="header-date">
-      <strong id="currentDate"></strong>
-      <span id="currentTime"></span>
-    </div>
-    <button class="btn-settings" onclick="window.openSettings()">🏪 الفروع</button>
-  </div>
+  <div class="logo-area"><div class="logo-icon">🍽️</div><div class="logo-text"><h1>إدارة الإلغاءات</h1><p>شركة عصر الشرق - خدمة العملاء</p></div></div>
+  <div class="header-right"><div class="header-date"><strong id="currentDate"></strong><span id="currentTime"></span></div><button class="btn-settings" onclick="openSettings()">🏪 الفروع</button></div>
 </div>
 
 <div class="main">
-
   <div class="stats-bar">
     <div class="stat-card"><div class="val" id="statTotal">0</div><div class="lbl">إجمالي الإلغاءات</div></div>
     <div class="stat-card"><div class="val" id="statAssigned" style="color:#6ee69b">0</div><div class="lbl">متعين لطيار</div></div>
@@ -322,99 +137,214 @@ tr:hover td{background:rgba(232,160,32,.04);}
   <div class="form-card">
     <h2>➕ إضافة إلغاء جديد</h2>
     <div class="form-grid">
-      <div class="field">
-        <label>الفرع *</label>
-        <select id="branchSelect"><option value="">-- اختر الفرع --</option></select>
-      </div>
-      <div class="field">
-        <label>رقم الهاتف *</label>
-        <input type="text" id="phoneInput" placeholder="07xxxxxxxxx" dir="ltr">
-      </div>
-      <div class="field">
-        <label>رقم الأوردر *</label>
-        <input type="text" id="orderIdInput" placeholder="مثال: 12345" dir="ltr">
-      </div>
-      <div class="field">
-        <label>حالة التعيين</label>
-        <div class="toggle-group">
-          <button class="toggle-btn active" id="toggleAssigned"    onclick="window.setAssigned(true)">✈️ متعين لطيار</button>
-          <button class="toggle-btn"        id="toggleNotAssigned" onclick="window.setAssigned(false)">❌ غير متعين</button>
-        </div>
-      </div>
+      <div class="field"><label>الفرع *</label><select id="branchSelect"></select></div>
+      <div class="field"><label>رقم الهاتف *</label><input type="text" id="phoneInput" placeholder="07xxxxxxxxx" dir="ltr"></div>
+      <div class="field"><label>رقم الأوردر *</label><input type="text" id="orderIdInput" placeholder="مثال: 12345" dir="ltr"></div>
+      <div class="field"><label>حالة التعيين</label><div class="toggle-group"><button class="toggle-btn active" id="toggleAssigned" onclick="setAssigned(true)">✈️ متعين لطيار</button><button class="toggle-btn" id="toggleNotAssigned" onclick="setAssigned(false)">❌ غير متعين</button></div></div>
     </div>
-
-    <div class="field" style="margin-bottom:14px">
-      <label>سبب الإلغاء *</label>
-      <div class="reason-chips" id="reasonChips">
-        <button class="reason-chip" onclick="window.selectReason(this,'عدم رد')">📵 عدم رد</button>
-        <button class="reason-chip" onclick="window.selectReason(this,'زبون')">👤 زبون</button>
-        <button class="reason-chip" onclick="window.selectReason(this,'تكرار')">🔁 تكرار</button>
-        <button class="reason-chip" onclick="window.selectReason(this,'تحويل')">🔄 تحويل</button>
-        <button class="reason-chip" onclick="window.selectReason(this,'خارج الزبون')">🚫 خارج الزبون</button>
-      </div>
-    </div>
-
+    <div class="field"><label>سبب الإلغاء *</label><div class="reason-chips"><button class="reason-chip" onclick="selectReason(this,'عدم رد')">📵 عدم رد</button><button class="reason-chip" onclick="selectReason(this,'زبون')">👤 زبون</button><button class="reason-chip" onclick="selectReason(this,'تكرار')">🔁 تكرار</button><button class="reason-chip" onclick="selectReason(this,'تحويل')">🔄 تحويل</button><button class="reason-chip" onclick="selectReason(this,'خارج الزبون')">🚫 خارج الزبون</button></div></div>
     <button class="btn-submit" id="saveBtn">💾 حفظ الإلغاء</button>
   </div>
 
   <div class="table-card">
-    <div class="table-header">
-      <h2>📋 إلغاءات اليوم</h2>
-      <input class="search-box" id="searchBox" placeholder="🔍 بحث..." oninput="window.filterTable()">
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr><th>#</th><th>الفرع</th><th>رقم الأوردر</th><th>رقم الهاتف</th><th>السبب</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></tr>
-        </thead>
-        <tbody id="tableBody"><tr><td colspan="8" class="empty-state">لا توجد إلغاءات بعد</td></tr>
-        </tbody>
-      </table>
-    </div>
+    <div class="table-header"><h2>📋 إلغاءات اليوم</h2><input class="search-box" id="searchBox" placeholder="🔍 بحث..." oninput="filterTable()"></div>
+    <div class="table-wrap"><table><thead><tr><th>#</th><th>الفرع</th><th>رقم الأوردر</th><th>رقم الهاتف</th><th>السبب</th><th>الحالة</th><th>الوقت</th><th>إجراء</th></tr></thead><tbody id="tableBody"><tr><td colspan="8" class="empty-state">لا توجد إلغاءات بعد</td></tr></tbody></table></div>
   </div>
 
-  <div class="export-card">
-    <div class="export-info">
-      <h3>📄 تصدير تقرير اليوم</h3>
-      <p>يتم توليد ملف Word بنفس تصميم النموذج الرسمي، مجمّعاً حسب الفروع</p>
-    </div>
-    <button class="btn-export" onclick="window.exportWord()">📥 تصدير Word</button>
-  </div>
-
+  <div class="export-card"><div class="export-info"><h3>📄 تصدير تقرير اليوم</h3><p>يتم توليد ملف Word بنفس تصميم النموذج الرسمي، مجمّعاً حسب الفروع</p></div><button class="btn-export" onclick="exportWord()">📥 تصدير Word</button></div>
 </div>
 
-<script>
-// ========== كل الدوال هنا معرفة على window مباشرة ==========
+<!-- Firebase SDK - تحميل مرة واحدة -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
+<script>
+// ========== تهيئة Firebase ==========
+const firebaseConfig = {
+  apiKey: "AIzaSyDr0Jcv-1O47S198AWpFILq7O5MwXoRFGg",
+  authDomain: "cansel-94336.firebaseapp.com",
+  databaseURL: "https://cansel-94336-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "cansel-94336",
+  storageBucket: "cansel-94336.firebasestorage.app",
+  messagingSenderId: "1047202012197",
+  appId: "1:1047202012197:web:715a3232395ce1cd99f3cc"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ========== البيانات العامة ==========
 let allRecords = [];
 let isAssigned = true;
 let selectedReason = '';
 let pendingDeleteId = null;
 let pendingRemoveBranch = null;
 
-// الساعة
-function updateClock(){
-  const n=new Date();
-  const dateEl = document.getElementById('currentDate');
-  const timeEl = document.getElementById('currentTime');
-  if(dateEl) dateEl.textContent = n.toLocaleDateString('ar-IQ',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  if(timeEl) timeEl.textContent = n.toLocaleTimeString('ar-IQ');
+const DEFAULT_BRANCHES = ["الشعب","البنوك","الغدير","الحرية","الدورة","الغزالية","بسماية","الأعظمية","حي العامل","البعيثة"];
+
+function loadBranches() {
+  try { 
+    const s = localStorage.getItem('branches'); 
+    return s ? JSON.parse(s) : [...DEFAULT_BRANCHES]; 
+  } catch { 
+    return [...DEFAULT_BRANCHES]; 
+  }
 }
-updateClock(); 
-setInterval(updateClock,1000);
+function saveBranches(arr) { 
+  localStorage.setItem('branches', JSON.stringify(arr)); 
+}
 
-// حالة التعيين
-window.setAssigned = function(v){
+let BRANCHES = loadBranches();
+
+// ========== دوال المساعدة ==========
+function showNote(msg, type) {
+  const n = document.getElementById('notification');
+  if(!n) return;
+  n.textContent = msg; 
+  n.className = 'notification show ' + type;
+  setTimeout(() => n.className = 'notification', 3200);
+}
+
+function populateBranchSelect() {
+  const sel = document.getElementById('branchSelect');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">-- اختر الفرع --</option>';
+  BRANCHES.forEach(b => {
+    const o = document.createElement('option');
+    o.value = o.textContent = b; 
+    sel.appendChild(o);
+  });
+}
+
+function renderBranchList() {
+  const ul = document.getElementById('branchList');
+  if(!ul) return;
+  ul.innerHTML = BRANCHES.map(b => `
+    <li class="branch-item">
+      <span>${b}</span>
+      <button class="btn-rm-branch" onclick="confirmRemoveBranch('${b}')">✕</button>
+    </li>
+  `).join('');
+}
+
+function addBranch(name) {
+  name = name.trim();
+  if (!name) return false;
+  if (BRANCHES.includes(name)) return 'dup';
+  BRANCHES.push(name);
+  saveBranches(BRANCHES);
+  populateBranchSelect();
+  renderBranchList();
+  return true;
+}
+
+function removeBranch(name) {
+  BRANCHES = BRANCHES.filter(b => b !== name);
+  saveBranches(BRANCHES);
+  populateBranchSelect();
+  renderBranchList();
+}
+
+// ========== عمليات Firebase ==========
+async function addCancellation(data) {
+  try {
+    await db.collection("cancellations").add({
+      ...data,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showNote("تم حفظ الإلغاء بنجاح", "success");
+    return true;
+  } catch(e) {
+    showNote("خطأ في الحفظ: " + e.message, "error");
+    console.error(e);
+    return false;
+  }
+}
+
+async function deleteCancellation(id) {
+  try {
+    await db.collection("cancellations").doc(id).delete();
+    showNote("تم حذف السجل بنجاح", "success");
+  } catch(e) {
+    showNote("خطأ في الحذف: " + e.message, "error");
+    console.error(e);
+  }
+}
+
+function loadTodayCancellations() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  db.collection("cancellations")
+    .orderBy("timestamp", "desc")
+    .onSnapshot(snap => {
+      const records = [];
+      snap.forEach(doc => {
+        const data = doc.data();
+        if(data.timestamp && data.timestamp.toDate() >= today) {
+          records.push({ id: doc.id, ...data });
+        }
+      });
+      renderTable(records);
+    });
+}
+
+// ========== دوال العرض ==========
+function renderTable(records) {
+  allRecords = records;
+  updateStats(records);
+  doRender(records);
+}
+
+function updateStats(r) {
+  document.getElementById('statTotal').textContent = r.length;
+  document.getElementById('statAssigned').textContent = r.filter(x => x.isAssigned).length;
+  document.getElementById('statNotAssigned').textContent = r.filter(x => !x.isAssigned).length;
+  document.getElementById('statBranches').textContent = new Set(r.map(x => x.branchName)).size;
+}
+
+function doRender(records) {
+  const tbody = document.getElementById('tableBody');
+  if(!records.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">لا توجد إلغاءات بعد</td></tr>';
+    return;
+  }
+  tbody.innerHTML = records.map((r, i) => {
+    const ts = r.timestamp?.toDate ? r.timestamp.toDate() : new Date();
+    const time = ts.toLocaleTimeString('ar-IQ', {hour:'2-digit', minute:'2-digit'});
+    const badge = r.isAssigned ? '<span class="badge badge-assigned">✈️ متعين</span>' : '<span class="badge badge-notassigned">❌ غير متعين</span>';
+    return `<tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td><span class="branch-tag">${r.branchName || ''}</span></td>
+      <td style="font-weight:700;direction:ltr">${r.orderId || ''}</td>
+      <td style="direction:ltr;color:var(--muted)">${r.phoneNumber || ''}</td>
+      <td>${r.reason || '—'}</td>
+      <td>${badge}</td>
+      <td class="time-text">${time}</td>
+      <td><button class="btn-delete" onclick="confirmDelete('${r.id}')">🗑️ استلم الزبون</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function filterTable() {
+  const q = document.getElementById('searchBox')?.value.toLowerCase() || '';
+  doRender(allRecords.filter(r => 
+    (r.branchName || '').includes(q) || 
+    (r.phoneNumber || '').includes(q) || 
+    (r.orderId || '').includes(q) || 
+    (r.reason || '').includes(q)
+  ));
+}
+
+// ========== دوال التحكم ==========
+function setAssigned(v) {
   isAssigned = v;
-  const toggleA = document.getElementById('toggleAssigned');
-  const toggleN = document.getElementById('toggleNotAssigned');
-  if(toggleA) toggleA.classList.toggle('active', v);
-  if(toggleN) toggleN.classList.toggle('active', !v);
-};
+  document.getElementById('toggleAssigned').classList.toggle('active', v);
+  document.getElementById('toggleNotAssigned').classList.toggle('active', !v);
+}
 
-// سبب الإلغاء
-window.selectReason = function(btn, reason){
-  if(selectedReason === reason){
+function selectReason(btn, reason) {
+  if(selectedReason === reason) {
     selectedReason = '';
     btn.classList.remove('selected');
     return;
@@ -422,27 +352,21 @@ window.selectReason = function(btn, reason){
   document.querySelectorAll('.reason-chip').forEach(c => c.classList.remove('selected'));
   selectedReason = reason;
   btn.classList.add('selected');
-};
+}
 
-// حفظ الإلغاء
-window.submitForm = async function(){
-  console.log("submitForm called");
+async function submitForm() {
+  console.log("submitForm called - saving cancellation");
   
-  const branch = document.getElementById('branchSelect')?.value;
-  const phone = document.getElementById('phoneInput')?.value.trim();
-  const orderId = document.getElementById('orderIdInput')?.value.trim();
+  const branch = document.getElementById('branchSelect').value;
+  const phone = document.getElementById('phoneInput').value.trim();
+  const orderId = document.getElementById('orderIdInput').value.trim();
   
-  if(!branch){ window.showNote("يرجى اختيار الفرع","error"); return; }
-  if(!phone){ window.showNote("يرجى إدخال رقم الهاتف","error"); return; }
-  if(!orderId){ window.showNote("يرجى إدخال رقم الأوردر","error"); return; }
-  if(!selectedReason){ window.showNote("يرجى اختيار سبب الإلغاء","error"); return; }
+  if(!branch) { showNote("يرجى اختيار الفرع", "error"); return; }
+  if(!phone) { showNote("يرجى إدخال رقم الهاتف", "error"); return; }
+  if(!orderId) { showNote("يرجى إدخال رقم الأوردر", "error"); return; }
+  if(!selectedReason) { showNote("يرجى اختيار سبب الإلغاء", "error"); return; }
   
-  if(typeof window.addCancellation !== 'function'){
-    window.showNote("جاري تحميل Firebase...","error");
-    return;
-  }
-  
-  const ok = await window.addCancellation({
+  const ok = await addCancellation({
     branchName: branch,
     phoneNumber: phone,
     orderId: orderId,
@@ -450,271 +374,183 @@ window.submitForm = async function(){
     isAssigned: isAssigned
   });
   
-  if(ok){
-    // مسح الحقول
-    const phoneInput = document.getElementById('phoneInput');
-    const orderInput = document.getElementById('orderIdInput');
-    const branchSelect = document.getElementById('branchSelect');
-    if(phoneInput) phoneInput.value = '';
-    if(orderInput) orderInput.value = '';
-    if(branchSelect) branchSelect.value = '';
-    
+  if(ok) {
+    document.getElementById('phoneInput').value = '';
+    document.getElementById('orderIdInput').value = '';
+    document.getElementById('branchSelect').value = '';
     document.querySelectorAll('.reason-chip').forEach(c => c.classList.remove('selected'));
     selectedReason = '';
-    window.setAssigned(true);
+    setAssigned(true);
   }
-};
-
-// عرض الجدول
-window.renderTable = function(records){
-  allRecords = records;
-  updateStats(records);
-  doRender(records);
-};
-
-function updateStats(r){
-  const totalEl = document.getElementById('statTotal');
-  const assignedEl = document.getElementById('statAssigned');
-  const notAssignedEl = document.getElementById('statNotAssigned');
-  const branchesEl = document.getElementById('statBranches');
-  if(totalEl) totalEl.textContent = r.length;
-  if(assignedEl) assignedEl.textContent = r.filter(x=>x.isAssigned).length;
-  if(notAssignedEl) notAssignedEl.textContent = r.filter(x=>!x.isAssigned).length;
-  if(branchesEl) branchesEl.textContent = new Set(r.map(x=>x.branchName)).size;
 }
 
-function doRender(records){
-  const tbody = document.getElementById('tableBody');
-  if(!tbody) return;
-  if(!records.length){
-    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">لا توجد إلغاءات بعد</td></tr>';
-    return;
-  }
-  tbody.innerHTML = records.map((r,i)=>{
-    const ts = r.timestamp?.toDate ? r.timestamp.toDate() : new Date();
-    const time = ts.toLocaleTimeString('ar-IQ',{hour:'2-digit',minute:'2-digit'});
-    const badge = r.isAssigned
-      ? '<span class="badge badge-assigned">✈️ متعين</span>'
-      : '<span class="badge badge-notassigned">❌ غير متعين</span>';
-    return `<tr>
-      <td style="color:var(--muted)">${i+1}</td>
-      <td><span class="branch-tag">${r.branchName||''}</span></td>
-      <td style="font-weight:700;direction:ltr">${r.orderId||''}</td>
-      <td style="direction:ltr;color:var(--muted)">${r.phoneNumber||''}</td>
-      <td>${r.reason||'—'}</td>
-      <td>${badge}</td>
-      <td class="time-text">${time}</td>
-      <td><button class="btn-delete" onclick="window.confirmDelete('${r.id}')">🗑️ استلم الزبون</button></td>
-    </tr>`;
-  }).join('');
-}
-
-window.filterTable = function(){
-  const q = document.getElementById('searchBox')?.value.toLowerCase() || '';
-  doRender(allRecords.filter(r => 
-    (r.branchName||'').includes(q) || 
-    (r.phoneNumber||'').includes(q) || 
-    (r.orderId||'').includes(q) || 
-    (r.reason||'').includes(q)
-  ));
-};
-
-// حذف
-window.confirmDelete = function(id){
+// ========== دوال الحذف ==========
+function confirmDelete(id) {
   pendingDeleteId = id;
-  const overlay = document.getElementById('confirmOverlay');
-  if(overlay) overlay.classList.add('show');
-};
+  document.getElementById('confirmOverlay').classList.add('show');
+}
 
-document.getElementById('confirmYes')?.addEventListener('click', async function(){
-  const overlay = document.getElementById('confirmOverlay');
-  if(overlay) overlay.classList.remove('show');
-  if(pendingDeleteId && typeof window.deleteCancellation === 'function'){
-    await window.deleteCancellation(pendingDeleteId);
-    pendingDeleteId = null;
-  }
-});
+function confirmRemoveBranch(name) {
+  pendingRemoveBranch = name;
+  document.getElementById('rmBranchMsg').textContent = `هل تريد حذف فرع "${name}" من القائمة؟`;
+  document.getElementById('rmBranchOverlay').classList.add('show');
+}
 
-document.getElementById('confirmNo')?.addEventListener('click', function(){
-  const overlay = document.getElementById('confirmOverlay');
-  if(overlay) overlay.classList.remove('show');
-  pendingDeleteId = null;
-});
+// ========== دوال الإعدادات ==========
+function openSettings() { document.getElementById('settingsPanel').classList.add('show'); }
+function closeSettings() { document.getElementById('settingsPanel').classList.remove('show'); }
+function closeSettingsBg(e) { if(e.target === document.getElementById('settingsPanel')) closeSettings(); }
 
-// إدارة الفروع
-window.openSettings = function(){
-  const panel = document.getElementById('settingsPanel');
-  if(panel) panel.classList.add('show');
-};
-
-window.closeSettings = function(){
-  const panel = document.getElementById('settingsPanel');
-  if(panel) panel.classList.remove('show');
-};
-
-window.closeSettingsBg = function(e){
-  if(e.target === document.getElementById('settingsPanel')) window.closeSettings();
-};
-
-window.addBranchUI = function(){
+function addBranchUI() {
   const inp = document.getElementById('newBranchInput');
   const val = inp?.value.trim();
   if(!val) return;
-  if(typeof window.addBranch === 'function'){
-    const res = window.addBranch(val);
-    if(res === 'dup'){ window.showNote("الفرع موجود مسبقاً","error"); return; }
-    if(inp) inp.value = '';
-    window.showNote("تمت إضافة فرع: "+val,"success");
-  }
-};
+  const res = addBranch(val);
+  if(res === 'dup') { showNote("الفرع موجود مسبقاً", "error"); return; }
+  inp.value = '';
+  showNote("تمت إضافة فرع: "+val, "success");
+}
 
-window.confirmRemoveBranch = function(name){
-  pendingRemoveBranch = name;
-  const msgEl = document.getElementById('rmBranchMsg');
-  const overlay = document.getElementById('rmBranchOverlay');
-  if(msgEl) msgEl.textContent = `هل تريد حذف فرع "${name}" من القائمة؟`;
-  if(overlay) overlay.classList.add('show');
-};
+// ========== دوال الساعة ==========
+function updateClock() {
+  const n = new Date();
+  const dateEl = document.getElementById('currentDate');
+  const timeEl = document.getElementById('currentTime');
+  if(dateEl) dateEl.textContent = n.toLocaleDateString('ar-IQ', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  if(timeEl) timeEl.textContent = n.toLocaleTimeString('ar-IQ');
+}
 
-document.getElementById('rmBranchYes')?.addEventListener('click', function(){
-  const overlay = document.getElementById('rmBranchOverlay');
-  if(overlay) overlay.classList.remove('show');
-  if(pendingRemoveBranch && typeof window.removeBranch === 'function'){
-    window.removeBranch(pendingRemoveBranch);
-    pendingRemoveBranch = null;
-  }
-});
-
-document.getElementById('rmBranchNo')?.addEventListener('click', function(){
-  const overlay = document.getElementById('rmBranchOverlay');
-  if(overlay) overlay.classList.remove('show');
-  pendingRemoveBranch = null;
-});
-
-// تصدير Word
-window.exportWord = async function(){
-  if(!window.docx || !window.docx.Document){ 
-    await window.loadDocx();
-    if(!window.docxLib) window.docxLib = await import('https://unpkg.com/docx@8.5.0/+esm').then(m=>m.default||m);
-    window.docx = window.docxLib;
-  }
-  if(!window.docx || !window.docx.Document){ 
-    window.showNote("فشل تحميل المكتبة","error");
-    return; 
-  }
-  
-  const loadingOverlay = document.getElementById('loadingOverlay');
-  if(loadingOverlay) loadingOverlay.classList.add('show');
-  
-  try{
-    const {Document:Doc, Packer, Paragraph, TextRun, Table, TableRow, TableCell, 
-           AlignmentType, WidthType, BorderStyle, ShadingType, VerticalAlign} = window.docx;
+// ========== تصدير Word ==========
+async function exportWord() {
+  showLoading(true);
+  try {
+    const response = await fetch('https://cdn.jsdelivr.net/npm/docx@8.5.0/+esm');
+    const docxModule = await import('https://cdn.jsdelivr.net/npm/docx@8.5.0/+esm');
+    const { Document: Doc, Packer, Paragraph, TextRun, Table, TableRow, TableCell, AlignmentType, WidthType, BorderStyle, ShadingType, VerticalAlign } = docxModule;
     
     const today = new Date();
-    const dateStr = today.toLocaleDateString('ar-IQ',{year:'numeric',month:'numeric',day:'numeric'});
-    const brd = {style:BorderStyle.SINGLE, size:6, color:"8B6914"};
-    const hBrd = {style:BorderStyle.SINGLE, size:8, color:"5a3e00"};
-    const borders = {top:brd, bottom:brd, left:brd, right:brd};
-    const hBorders = {top:hBrd, bottom:hBrd, left:hBrd, right:hBrd};
+    const dateStr = today.toLocaleDateString('ar-IQ', {year:'numeric', month:'numeric', day:'numeric'});
+    const brd = {style: BorderStyle.SINGLE, size: 6, color: "8B6914"};
+    const hBrd = {style: BorderStyle.SINGLE, size: 8, color: "5a3e00"};
+    const borders = {top: brd, bottom: brd, left: brd, right: brd};
+    const hBorders = {top: hBrd, bottom: hBrd, left: hBrd, right: hBrd};
     
     const grouped = {};
-    allRecords.forEach(r => { 
-      if(!grouped[r.branchName]) grouped[r.branchName] = []; 
-      grouped[r.branchName].push(r); 
-    });
+    allRecords.forEach(r => { if(!grouped[r.branchName]) grouped[r.branchName] = []; grouped[r.branchName].push(r); });
     
-    const ordered = (window.BRANCHES || []).filter(b => grouped[b]);
-    const extras = Object.keys(grouped).filter(b => !(window.BRANCHES || []).includes(b));
+    const ordered = BRANCHES.filter(b => grouped[b]);
+    const extras = Object.keys(grouped).filter(b => !BRANCHES.includes(b));
     const allBranches = [...ordered, ...extras];
     const children = [];
     
-    const mkP = (text,size,bold,color,after=80) => new Paragraph({
+    const mkP = (text, size, bold, color, after=80) => new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: {before:0, after},
-      children: [new TextRun({text, bold, size, font:"Traditional Arabic", color})]
+      spacing: {before: 0, after},
+      children: [new TextRun({text, bold, size, font: "Traditional Arabic", color})]
     });
     
-    children.push(mkP("شركة عصر الشرق لإدارة المطاعم",32,true,"4a2c00",60));
-    children.push(mkP("قسم خدمة العملاء",26,true,"6b3f00",60));
-    children.push(mkP(dateStr,24,true,"333333",120));
-    children.push(new Paragraph({border:{bottom:{style:BorderStyle.SINGLE,size:8,color:"8B6914",space:1}}, spacing:{before:0,after:180}, children:[]}));
+    children.push(mkP("شركة عصر الشرق لإدارة المطاعم", 32, true, "4a2c00", 60));
+    children.push(mkP("قسم خدمة العملاء", 26, true, "6b3f00", 60));
+    children.push(mkP(dateStr, 24, true, "333333", 120));
+    children.push(new Paragraph({border: {bottom: {style: BorderStyle.SINGLE, size: 8, color: "8B6914", space: 1}}, spacing: {before: 0, after: 180}, children: []}));
     
-    const TW = 8504, colW = [1600,3004,2000,1900];
-    const mkH = (text,w) => new TableCell({
-      borders: hBorders,
-      width: {size:w, type:WidthType.DXA},
-      shading: {fill:"F5DEB3", type:ShadingType.CLEAR},
+    const TW = 8504, colW = [1600, 3004, 2000, 1900];
+    const mkH = (text, w) => new TableCell({
+      borders: hBorders, width: {size: w, type: WidthType.DXA},
+      shading: {fill: "F5DEB3", type: ShadingType.CLEAR},
       verticalAlign: VerticalAlign.CENTER,
-      margins: {top:80, bottom:80, left:120, right:120},
-      children: [new Paragraph({alignment:AlignmentType.CENTER, children:[new TextRun({text, bold:true, size:20, font:"Traditional Arabic", color:"3d2000"})]})]
+      margins: {top: 80, bottom: 80, left: 120, right: 120},
+      children: [new Paragraph({alignment: AlignmentType.CENTER, children: [new TextRun({text, bold: true, size: 20, font: "Traditional Arabic", color: "3d2000"})]})]
     });
     
-    const mkC = (text,w) => new TableCell({
-      borders,
-      width: {size:w, type:WidthType.DXA},
+    const mkC = (text, w) => new TableCell({
+      borders, width: {size: w, type: WidthType.DXA},
       verticalAlign: VerticalAlign.CENTER,
-      margins: {top:60, bottom:60, left:100, right:100},
-      children: [new Paragraph({alignment:AlignmentType.CENTER, children:[new TextRun({text:String(text||''), size:18, font:"Traditional Arabic"})]})]
+      margins: {top: 60, bottom: 60, left: 100, right: 100},
+      children: [new Paragraph({alignment: AlignmentType.CENTER, children: [new TextRun({text: String(text || ''), size: 18, font: "Traditional Arabic"})]})]
     });
-    
-    if(!allBranches.length) children.push(mkP("لا توجد إلغاءات لهذا اليوم",24,false,"888888"));
     
     allBranches.forEach(branch => {
       const rows = grouped[branch] || [];
-      const tableRows = [new TableRow({children:[
-        mkH("رقم الاوردر", colW[0]),
-        mkH(`إلغاء فرع ${branch} -`, colW[1]),
-        mkH("الرقم", colW[2]),
-        mkH("الحالة", colW[3])
-      ]})];
-      
-      rows.forEach(r => tableRows.push(new TableRow({children:[
-        mkC(r.orderId||'', colW[0]),
-        mkC(r.reason||'', colW[1]),
-        mkC(r.phoneNumber||'', colW[2]),
-        mkC(r.isAssigned ? 'متعين' : 'غير متعين', colW[3])
-      ]})));
-      
-      children.push(new Table({width:{size:TW, type:WidthType.DXA}, columnWidths:colW, rows:tableRows, bidiVisual:true}));
-      children.push(new Paragraph({spacing:{before:0, after:200}, children:[]}));
+      const tableRows = [new TableRow({children: [mkH("رقم الاوردر", colW[0]), mkH(`إلغاء فرع ${branch} -`, colW[1]), mkH("الرقم", colW[2]), mkH("الحالة", colW[3])]})];
+      rows.forEach(r => tableRows.push(new TableRow({children: [mkC(r.orderId || '', colW[0]), mkC(r.reason || '', colW[1]), mkC(r.phoneNumber || '', colW[2]), mkC(r.isAssigned ? 'متعين' : 'غير متعين', colW[3])]})));
+      children.push(new Table({width: {size: TW, type: WidthType.DXA}, columnWidths: colW, rows: tableRows, bidiVisual: true}));
+      children.push(new Paragraph({spacing: {before: 0, after: 200}, children: []}));
     });
     
-    const document2 = new Doc({sections:[{properties:{page:{size:{width:11906,height:16838}, margin:{top:1080, right:1080, bottom:1080, left:1080}}}, children}]});
-    const buffer = await Packer.toBuffer(document2);
-    const blob = new Blob([buffer], {type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+    const doc = new Doc({sections: [{properties: {page: {size: {width: 11906, height: 16838}, margin: {top: 1080, right: 1080, bottom: 1080, left: 1080}}}, children}]});
+    const buffer = await Packer.toBuffer(doc);
+    const blob = new Blob([buffer], {type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `cancellation_report_${dateStr.replace(/\//g,'-')}.docx`;
+    a.download = `cancellation_report_${dateStr.replace(/\//g, '-')}.docx`;
     a.click();
     URL.revokeObjectURL(url);
-    window.showNote("تم تصدير التقرير بنجاح","success");
-  } catch(e){ 
-    console.error(e); 
-    window.showNote("خطأ في التصدير: "+e.message,"error"); 
-  } finally{ 
-    const loadingOverlay = document.getElementById('loadingOverlay');
-    if(loadingOverlay) loadingOverlay.classList.remove('show');
+    showNote("تم تصدير التقرير بنجاح", "success");
+  } catch(e) {
+    console.error(e);
+    showNote("خطأ في التصدير: " + e.message, "error");
+  } finally {
+    showLoading(false);
   }
-};
+}
 
-// ربط زر الحفظ - الطريقة الأبسط
+function showLoading(v) {
+  const el = document.getElementById('loadingOverlay');
+  if(el) el.classList.toggle('show', v);
+}
+
+// ========== تهيئة الصفحة ==========
 document.addEventListener('DOMContentLoaded', function() {
-  console.log("DOM loaded - binding save button");
+  console.log("DOM loaded - initializing");
+  
+  populateBranchSelect();
+  renderBranchList();
+  loadTodayCancellations();
+  updateClock();
+  setInterval(updateClock, 1000);
+  
   const saveBtn = document.getElementById('saveBtn');
   if(saveBtn) {
     saveBtn.onclick = function(e) {
       e.preventDefault();
-      window.submitForm();
+      submitForm();
     };
   }
+  
+  document.getElementById('confirmYes').onclick = function() {
+    document.getElementById('confirmOverlay').classList.remove('show');
+    if(pendingDeleteId) {
+      deleteCancellation(pendingDeleteId);
+      pendingDeleteId = null;
+    }
+  };
+  
+  document.getElementById('confirmNo').onclick = function() {
+    document.getElementById('confirmOverlay').classList.remove('show');
+    pendingDeleteId = null;
+  };
+  
+  document.getElementById('rmBranchYes').onclick = function() {
+    document.getElementById('rmBranchOverlay').classList.remove('show');
+    if(pendingRemoveBranch) {
+      removeBranch(pendingRemoveBranch);
+      pendingRemoveBranch = null;
+    }
+  };
+  
+  document.getElementById('rmBranchNo').onclick = function() {
+    document.getElementById('rmBranchOverlay').classList.remove('show');
+    pendingRemoveBranch = null;
+  };
 });
 
 // اختصار Ctrl+Enter
-document.addEventListener('keydown', function(e){ 
-  if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){
+document.addEventListener('keydown', function(e) { 
+  if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
     e.preventDefault();
-    window.submitForm();
+    submitForm();
   } 
 });
 </script>
