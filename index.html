@@ -350,7 +350,7 @@ tr:hover td{background:rgba(232,160,32,.04);}
       </div>
     </div>
 
-    <button class="btn-submit" type="button" onclick="alert('Button clicked!'); doSave();">💾 حفظ الإلغاء</button>
+    <button class="btn-submit" id="saveBtn" style="cursor:pointer">💾 حفظ الإلغاء</button>
   </div>
 
   <div class="table-card">
@@ -395,43 +395,54 @@ function updateClock(){
 updateClock(); setInterval(updateClock,1000);
 
 // Assigned toggle
-function setAssigned(v){
+window.setAssigned = function(v){
   isAssigned=v;
   document.getElementById('toggleAssigned').classList.toggle('active',v);
   document.getElementById('toggleNotAssigned').classList.toggle('active',!v);
-}
+};
 
 // Reason chips
-function selectReason(btn,reason){
+window.selectReason = function(btn,reason){
   if(selectedReason===reason){ selectedReason=''; btn.classList.remove('selected'); return; }
   document.querySelectorAll('.reason-chip').forEach(c=>c.classList.remove('selected'));
   selectedReason=reason; btn.classList.add('selected');
-}
+};
 
-// Save handler
-function doSave(){
+// Submit - الرئيسية
+window.submitForm = async function(){
   if(typeof window.addCancellation !== 'function'){
     window.showNote("جاري تحميل البيانات...","error");
-    setTimeout(doSave,500);
-    return;
+    await new Promise(r=>setTimeout(r,1000));
+    if(typeof window.addCancellation !== 'function'){
+      window.showNote("لم يتم تحميل Firebase","error");
+      return;
+    }
   }
-  window.submitForm();
-}
-
-// Submit
-window.submitForm = async function(){
+  
   const branch=document.getElementById('branchSelect').value;
   const phone=document.getElementById('phoneInput').value.trim();
   const orderId=document.getElementById('orderIdInput').value.trim();
-  if(!branch||!phone||!orderId){ window.showNote("يرجى تعبئة الفرع ورقم الهاتف ورقم الأوردر","error"); return; }
+  
+  if(!branch){ window.showNote("يرجى اختيار الفرع","error"); return; }
+  if(!phone){ window.showNote("يرجى إدخال رقم الهاتف","error"); return; }
+  if(!orderId){ window.showNote("يرجى إدخال رقم الأوردر","error"); return; }
   if(!selectedReason){ window.showNote("يرجى اختيار سبب الإلغاء","error"); return; }
-  const ok=await window.addCancellation({branchName:branch,phoneNumber:phone,orderId:orderId,reason:selectedReason,isAssigned:isAssigned});
+  
+  const ok=await window.addCancellation({
+    branchName:branch,
+    phoneNumber:phone,
+    orderId:orderId,
+    reason:selectedReason,
+    isAssigned:isAssigned
+  });
+  
   if(ok){
     document.getElementById('phoneInput').value='';
     document.getElementById('orderIdInput').value='';
     document.getElementById('branchSelect').value='';
     document.querySelectorAll('.reason-chip').forEach(c=>c.classList.remove('selected'));
     selectedReason='';
+    window.setAssigned(true);
     window.showNote("تم حفظ الإلغاء بنجاح","success");
   }
 }
@@ -459,7 +470,7 @@ function doRender(records){
       <td>${r.reason||'—'}</td>
       <td>${badge}</td>
       <td class="time-text">${time}</td>
-      <td><button class="btn-delete" onclick="confirmDelete('${r.id}')">🗑️ استلم الزبون</button></td>
+      <td><button class="btn-delete" onclick="window.confirmDelete('${r.id}')">🗑️ استلم الزبون</button></td>
     </tr>`;
   }).join('');
 }
@@ -471,7 +482,7 @@ function updateStats(r){
 }
 
 // Delete confirm
-function confirmDelete(id){ pendingDeleteId=id; document.getElementById('confirmOverlay').classList.add('show'); }
+window.confirmDelete = function(id){ pendingDeleteId=id; document.getElementById('confirmOverlay').classList.add('show'); };
 document.getElementById('confirmYes').onclick=async()=>{
   document.getElementById('confirmOverlay').classList.remove('show');
   if(pendingDeleteId){ await window.deleteCancellation(pendingDeleteId); pendingDeleteId=null; }
@@ -556,6 +567,27 @@ async function exportWord(){
 }
 
 function showLoading(v){ document.getElementById('loadingOverlay').classList.toggle('show',v); }
+
+// ربط زر الحفظ بشكل آمن
+document.addEventListener('DOMContentLoaded',function(){
+  const saveBtn = document.getElementById('saveBtn');
+  if(saveBtn){
+    const newSaveBtn = saveBtn.cloneNode(true);
+    saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+    newSaveBtn.addEventListener('click', function(e){
+      e.preventDefault();
+      window.submitForm();
+    });
+  }
+});
+
+// اختصار Ctrl+Enter
+document.addEventListener('keydown',function(e){ 
+  if(e.key==='Enter' && (e.ctrlKey||e.metaKey)){
+    e.preventDefault();
+    window.submitForm();
+  } 
+});
 </script>
 </body>
 </html>
