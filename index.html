@@ -6,7 +6,7 @@
 <title>إدارة الإلغاءات - عصر الشرق</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap');
 :root{--bg:#0f0f1a;--surface:#16162a;--card:#1e1e35;--border:#2a2a4a;--accent:#e8a020;--text:#e8e8f0;--muted:#7a7a9a;--danger:#e74c3c;--success:#27ae60;--radius:12px;}
@@ -293,6 +293,8 @@ async function submitForm(){
   const orderId= document.getElementById('orderIdInput').value.trim();
   if(!branch || !phone || !orderId){ showNote("يرجى تعبئة الفرع ورقم الهاتف ورقم الأوردر","error"); return; }
   if(!selectedReason){ showNote("يرجى اختيار سبب الإلغاء","error"); return; }
+  const btn = document.querySelector('.btn-submit');
+  btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
   try{
     await db.collection('cancellations').add({
       branchName: branch, phoneNumber: phone, orderId: orderId,
@@ -306,6 +308,7 @@ async function submitForm(){
     selectedReason='';
     showNote("تم حفظ الإلغاء بنجاح ✅","success");
   } catch(e){ showNote("خطأ في الحفظ: "+e.message,"error"); }
+  finally{ btn.disabled=false; btn.textContent='💾 حفظ الإلغاء'; }
 }
 
 // ── Toggle assigned ──
@@ -395,6 +398,7 @@ document.getElementById('rmBranchNo').onclick=()=>{ document.getElementById('rmB
 
 // ── Word Export ──
 async function exportWord(){
+  if(typeof docx === 'undefined'){ showNote("مكتبة التصدير لم تتحمل بعد، انتظر ثانية وأعد المحاولة","error"); return; }
   document.getElementById('loadingOverlay').classList.add('show');
   try{
     const {Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,AlignmentType,WidthType,BorderStyle,ShadingType,VerticalAlign}=docx;
