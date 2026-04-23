@@ -402,74 +402,107 @@ document.getElementById('rmBranchYes').onclick=()=>{
 };
 document.getElementById('rmBranchNo').onclick=()=>{ document.getElementById('rmBranchOverlay').classList.remove('show'); pendingRemoveBranch=null; };
 
-// ── Export Word (بدون مكتبة خارجية - نفس تصميم الملف الأصلي) ──
+// ── Export Word ──
 function exportWord(){
   document.getElementById('loadingOverlay').classList.add('show');
   try{
     const today=new Date();
-    const dateStr=today.toLocaleDateString('ar-IQ',{year:'numeric',month:'numeric',day:'numeric'});
+    const dateStr=`${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}`;
 
     const grouped={};
     allRecords.forEach(r=>{
       if(!grouped[r.branchName]) grouped[r.branchName]=[];
       grouped[r.branchName].push(r);
     });
-    const ordered=BRANCHES.filter(b=>grouped[b]);
-    const extras=Object.keys(grouped).filter(b=>!BRANCHES.includes(b));
-    const allBranches=[...ordered,...extras];
 
-    let tablesHtml='';
-    allBranches.forEach(branch=>{
+    // كل الفروع تظهر حتى لو فارغة — بنفس ترتيب الملف الأصلي
+    const allBranches=[...BRANCHES,...Object.keys(grouped).filter(b=>!BRANCHES.includes(b))];
+
+    function makeTable(branch){
       const rows=grouped[branch]||[];
-      let rowsHtml=rows.map(r=>`
-        <tr>
-          <td>${r.orderId||''}</td>
-          <td>${r.reason||''}</td>
-          <td>${r.phoneNumber||''}</td>
-          <td>${r.isAssigned?'متعين':'غير متعين'}</td>
-        </tr>`).join('');
-      // صفوف فارغة بحد ادنى 5
-      const minRows=Math.max(5,rows.length);
+      const minRows=Math.max(7,rows.length);
+      let rowsHtml=rows.map(r=>`<tr>
+        <td>${r.orderId||''}</td>
+        <td>${r.reason||''}</td>
+        <td>${r.phoneNumber||''}</td>
+        <td>${r.isAssigned?'متعين':'غير متعين'}</td>
+      </tr>`).join('');
       for(let i=rows.length;i<minRows;i++) rowsHtml+='<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>';
-      tablesHtml+=`
-        <table>
-          <thead><tr>
-            <th>رقم الاوردر</th>
-            <th>الغاء فرع ${branch} -</th>
-            <th>الرقم</th>
-            <th>الحاله</th>
-          </tr></thead>
-          <tbody>${rowsHtml}</tbody>
-        </table><br>`;
-    });
+      return `<table>
+        <thead><tr>
+          <th>رقم الاوردر</th>
+          <th>الغاء فرع ${branch} -</th>
+          <th>الرقم</th>
+          <th>الحاله</th>
+        </tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>`;
+    }
 
-    if(!allBranches.length) tablesHtml='<p style="text-align:center">لا توجد إلغاءات لهذا اليوم</p>';
+    // تقسيم الفروع: الأول في الصفحة الأولى مع الهيدر، الباقي جدولان جنباً إلى جنب
+    let bodyHtml='';
+
+    // الصفحة الأولى: هيدر + أول جدولين
+    const first2=allBranches.slice(0,2);
+    const rest=allBranches.slice(2);
+
+    let first2Html='';
+    if(first2[0]) first2Html+=`<div class="col">${makeTable(first2[0])}</div>`;
+    if(first2[1]) first2Html+=`<div class="col">${makeTable(first2[1])}</div>`;
+
+    bodyHtml+=`
+      <div class="page1">
+        <div class="header-box">
+          <div class="logo-side">
+            <div class="logo-circle">🍽</div>
+            <div class="company-sub">عصر الشرق</div>
+          </div>
+          <div class="header-text">
+            <div class="co-name">مركة عصر الشرق</div>
+            <div class="co-sub">لادارة المطاعم</div>
+            <div class="co-dept">قسم خدمة العملاء</div>
+            <div class="co-date">${dateStr}</div>
+          </div>
+        </div>
+        <div class="two-col">${first2Html}</div>
+      </div>`;
+
+    // الصفحات التالية: جدولان في كل صفحة
+    for(let i=0;i<rest.length;i+=2){
+      const a=rest[i], b=rest[i+1];
+      bodyHtml+=`<div class="page-break"></div>
+        <div class="two-col">
+          <div class="col">${makeTable(a)}</div>
+          ${b?`<div class="col">${makeTable(b)}</div>`:'<div class="col"></div>'}
+        </div>`;
+    }
 
     const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office"
       xmlns:w="urn:schemas-microsoft-com:office:word"
       xmlns="http://www.w3.org/TR/REC-html40">
     <head><meta charset="utf-8">
-    <xml><w:WordDocument><w:View>Print</w:View><w:DoNotOptimizeForBrowser/></w:WordDocument></xml>
+    <xml><w:WordDocument>
+      <w:View>Print</w:View>
+      <w:DoNotOptimizeForBrowser/>
+    </w:WordDocument></xml>
     <style>
-      body{font-family:"Traditional Arabic",Arial;direction:rtl;margin:2cm;font-size:13pt;}
-      h1{text-align:center;font-size:18pt;font-weight:bold;margin:0 0 4px 0;}
-      h2{text-align:center;font-size:15pt;font-weight:bold;margin:0 0 4px 0;}
-      h3{text-align:center;font-size:13pt;font-weight:bold;margin:0 0 8px 0;}
-      .date{text-align:center;font-size:13pt;font-weight:bold;margin:8px 0;}
-      .line{border:none;border-bottom:2px solid black;margin:10px 0 18px 0;}
-      table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:12pt;}
-      th{background:#F5DEB3;border:1px solid #8B6914;padding:6px 10px;font-weight:bold;text-align:center;}
-      td{border:1px solid #8B6914;padding:5px 10px;text-align:center;}
+      body{font-family:"Traditional Arabic",Arial;direction:rtl;margin:1.5cm;font-size:11pt;}
+      .header-box{display:flex;align-items:center;justify-content:space-between;border:2px solid black;padding:8px 14px;margin-bottom:14px;}
+      .logo-side{text-align:center;font-size:28pt;line-height:1;}
+      .company-sub{font-size:9pt;font-weight:bold;color:#c0392b;}
+      .header-text{text-align:right;}
+      .co-name{font-size:14pt;font-weight:bold;}
+      .co-sub,.co-dept{font-size:11pt;}
+      .co-date{font-size:12pt;font-weight:bold;margin-top:4px;}
+      .two-col{display:flex;gap:12px;direction:rtl;}
+      .col{flex:1;min-width:0;}
+      table{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:10pt;}
+      th{color:#c0392b;border:1px solid black;padding:5px 8px;font-weight:bold;text-align:center;background:white;}
+      td{border:1px solid black;padding:4px 8px;text-align:center;height:18px;}
+      .page-break{page-break-before:always;mso-special-character:line-break;}
     </style>
     </head>
-    <body>
-      <h1>شركة عصر الشرق</h1>
-      <h2>لادارة المطاعم</h2>
-      <h3>قسم خدمة العملاء</h3>
-      <div class="date">${dateStr}</div>
-      <hr class="line">
-      ${tablesHtml}
-    </body></html>`;
+    <body>${bodyHtml}</body></html>`;
 
     const blob=new Blob(['\ufeff'+html],{type:'application/msword;charset=utf-8'});
     const url=URL.createObjectURL(blob);
