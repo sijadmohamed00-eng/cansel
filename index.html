@@ -6,7 +6,6 @@
 <title>إدارة الإلغاءات - عصر الشرق</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap');
 :root{--bg:#0f0f1a;--surface:#16162a;--card:#1e1e35;--border:#2a2a4a;--accent:#e8a020;--text:#e8e8f0;--muted:#7a7a9a;--danger:#e74c3c;--success:#27ae60;--radius:12px;}
@@ -47,6 +46,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 .toggle-btn.active{background:var(--accent);color:#000;}
 .btn-submit{width:100%;padding:12px;background:linear-gradient(135deg,var(--accent),#f0c040);color:#000;font-family:'Tajawal',sans-serif;font-size:15px;font-weight:700;border:none;border-radius:8px;cursor:pointer;transition:opacity .2s;}
 .btn-submit:hover{opacity:.9;}
+.btn-submit:disabled{opacity:.6;cursor:not-allowed;}
 .table-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px;}
 .table-header{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap;}
 .table-header h2{font-size:15px;font-weight:700;color:var(--accent);}
@@ -194,7 +194,7 @@ tr:hover td{background:rgba(232,160,32,.04);}
     </div>
     <div class="field" style="margin-bottom:14px">
       <label>سبب الإلغاء *</label>
-      <div class="reason-chips" id="reasonChips">
+      <div class="reason-chips">
         <button class="reason-chip" onclick="selectReason(this,'عدم رد')">📵 عدم رد</button>
         <button class="reason-chip" onclick="selectReason(this,'زبون')">👤 زبون</button>
         <button class="reason-chip" onclick="selectReason(this,'تكرار')">🔁 تكرار</button>
@@ -202,7 +202,7 @@ tr:hover td{background:rgba(232,160,32,.04);}
         <button class="reason-chip" onclick="selectReason(this,'خارج الزبون')">🚫 خارج الزبون</button>
       </div>
     </div>
-    <button class="btn-submit" onclick="submitForm()">💾 حفظ الإلغاء</button>
+    <button class="btn-submit" id="saveBtn" onclick="submitForm()">💾 حفظ الإلغاء</button>
   </div>
 
   <div class="table-card">
@@ -225,23 +225,22 @@ tr:hover td{background:rgba(232,160,32,.04);}
   <div class="export-card">
     <div class="export-info">
       <h3>📄 تصدير تقرير اليوم</h3>
-      <p>يتم توليد ملف Word مجمّعاً حسب الفروع</p>
+      <p>نفس تصميم الملف الرسمي - مجمّع حسب الفروع</p>
     </div>
     <button class="btn-export" onclick="exportWord()">📥 تصدير Word</button>
   </div>
 </div>
 
 <script>
-// ── Firebase init (compat SDK — no modules needed) ──
-const firebaseConfig = {
-  apiKey:            "AIzaSyDr0Jcv-1O47S198AWpFILq7O5MwXoRFGg",
-  authDomain:        "cansel-94336.firebaseapp.com",
-  projectId:         "cansel-94336",
-  storageBucket:     "cansel-94336.firebasestorage.app",
-  messagingSenderId: "1047202012197",
-  appId:             "1:1047202012197:web:715a3232395ce1cd99f3cc"
-};
-firebase.initializeApp(firebaseConfig);
+// ── Firebase ──
+firebase.initializeApp({
+  apiKey:"AIzaSyDr0Jcv-1O47S198AWpFILq7O5MwXoRFGg",
+  authDomain:"cansel-94336.firebaseapp.com",
+  projectId:"cansel-94336",
+  storageBucket:"cansel-94336.firebasestorage.app",
+  messagingSenderId:"1047202012197",
+  appId:"1:1047202012197:web:715a3232395ce1cd99f3cc"
+});
 const db = firebase.firestore();
 
 // ── Branches ──
@@ -251,12 +250,18 @@ function saveBranches(){ localStorage.setItem('branches',JSON.stringify(BRANCHES
 
 function populateBranchSelect(){
   const sel=document.getElementById('branchSelect');
+  const cur=sel.value;
   sel.innerHTML='<option value="">-- اختر الفرع --</option>';
   BRANCHES.forEach(b=>{ const o=document.createElement('option'); o.value=o.textContent=b; sel.appendChild(o); });
+  sel.value=cur;
 }
+
 function renderBranchList(){
   document.getElementById('branchList').innerHTML=BRANCHES.map(b=>`
-    <li class="branch-item"><span>${b}</span><button class="btn-rm-branch" onclick="confirmRemoveBranch('${b}')">✕</button></li>`).join('');
+    <li class="branch-item">
+      <span>${b}</span>
+      <button class="btn-rm-branch" onclick="confirmRemoveBranch('${b}')">✕</button>
+    </li>`).join('');
 }
 
 // ── State ──
@@ -283,23 +288,23 @@ function startListener(){
     allRecords=records;
     updateStats(records);
     doRender(records);
-  }, err=>{ showNote("خطأ في الاتصال: "+err.message,"error"); });
+  }, err=>showNote("خطأ في الاتصال: "+err.message,"error"));
 }
 
 // ── Submit ──
 async function submitForm(){
-  const branch = document.getElementById('branchSelect').value;
-  const phone  = document.getElementById('phoneInput').value.trim();
-  const orderId= document.getElementById('orderIdInput').value.trim();
-  if(!branch || !phone || !orderId){ showNote("يرجى تعبئة الفرع ورقم الهاتف ورقم الأوردر","error"); return; }
+  const branch=document.getElementById('branchSelect').value;
+  const phone=document.getElementById('phoneInput').value.trim();
+  const orderId=document.getElementById('orderIdInput').value.trim();
+  if(!branch||!phone||!orderId){ showNote("يرجى تعبئة الفرع ورقم الهاتف ورقم الأوردر","error"); return; }
   if(!selectedReason){ showNote("يرجى اختيار سبب الإلغاء","error"); return; }
-  const btn = document.querySelector('.btn-submit');
-  btn.disabled = true; btn.textContent = '⏳ جاري الحفظ...';
+  const btn=document.getElementById('saveBtn');
+  btn.disabled=true; btn.textContent='⏳ جاري الحفظ...';
   try{
     await db.collection('cancellations').add({
-      branchName: branch, phoneNumber: phone, orderId: orderId,
-      reason: selectedReason, isAssigned: isAssigned,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      branchName:branch, phoneNumber:phone, orderId:orderId,
+      reason:selectedReason, isAssigned:isAssigned,
+      timestamp:firebase.firestore.FieldValue.serverTimestamp()
     });
     document.getElementById('phoneInput').value='';
     document.getElementById('orderIdInput').value='';
@@ -307,7 +312,7 @@ async function submitForm(){
     document.querySelectorAll('.reason-chip').forEach(c=>c.classList.remove('selected'));
     selectedReason='';
     showNote("تم حفظ الإلغاء بنجاح ✅","success");
-  } catch(e){ showNote("خطأ في الحفظ: "+e.message,"error"); }
+  }catch(e){ showNote("خطأ في الحفظ: "+e.message,"error"); }
   finally{ btn.disabled=false; btn.textContent='💾 حفظ الإلغاء'; }
 }
 
@@ -382,6 +387,7 @@ function addBranchUI(){
   populateBranchSelect(); renderBranchList();
   showNote("تمت إضافة فرع: "+val,"success");
 }
+
 function confirmRemoveBranch(name){
   pendingRemoveBranch=name;
   document.getElementById('rmBranchMsg').textContent=`هل تريد حذف فرع "${name}" من القائمة؟`;
@@ -396,24 +402,84 @@ document.getElementById('rmBranchYes').onclick=()=>{
 };
 document.getElementById('rmBranchNo').onclick=()=>{ document.getElementById('rmBranchOverlay').classList.remove('show'); pendingRemoveBranch=null; };
 
-// ── Word Export ──
-ات لهذا اليوم",24,false,"888888"));
+// ── Export Word (بدون مكتبة خارجية - نفس تصميم الملف الأصلي) ──
+function exportWord(){
+  document.getElementById('loadingOverlay').classList.add('show');
+  try{
+    const today=new Date();
+    const dateStr=today.toLocaleDateString('ar-IQ',{year:'numeric',month:'numeric',day:'numeric'});
+
+    const grouped={};
+    allRecords.forEach(r=>{
+      if(!grouped[r.branchName]) grouped[r.branchName]=[];
+      grouped[r.branchName].push(r);
+    });
+    const ordered=BRANCHES.filter(b=>grouped[b]);
+    const extras=Object.keys(grouped).filter(b=>!BRANCHES.includes(b));
+    const allBranches=[...ordered,...extras];
+
+    let tablesHtml='';
     allBranches.forEach(branch=>{
       const rows=grouped[branch]||[];
-      const tableRows=[new TableRow({children:[mkH("رقم الاوردر",colW[0]),mkH(`إلغاء فرع ${branch}`,colW[1]),mkH("الرقم",colW[2]),mkH("الحالة",colW[3])]})];
-      if(!rows.length) tableRows.push(new TableRow({children:colW.map(w=>mkC('',w))}));
-      else rows.forEach(r=>tableRows.push(new TableRow({children:[mkC(r.orderId||'',colW[0]),mkC(r.reason||'',colW[1]),mkC(r.phoneNumber||'',colW[2]),mkC(r.isAssigned?'متعين':'غير متعين',colW[3])]})));
-      children.push(new Table({width:{size:TW,type:WidthType.DXA},columnWidths:colW,rows:tableRows,bidiVisual:true}));
-      children.push(new Paragraph({spacing:{before:0,after:200},children:[]}));
+      let rowsHtml=rows.map(r=>`
+        <tr>
+          <td>${r.orderId||''}</td>
+          <td>${r.reason||''}</td>
+          <td>${r.phoneNumber||''}</td>
+          <td>${r.isAssigned?'متعين':'غير متعين'}</td>
+        </tr>`).join('');
+      // صفوف فارغة بحد ادنى 5
+      const minRows=Math.max(5,rows.length);
+      for(let i=rows.length;i<minRows;i++) rowsHtml+='<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>';
+      tablesHtml+=`
+        <table>
+          <thead><tr>
+            <th>رقم الاوردر</th>
+            <th>الغاء فرع ${branch} -</th>
+            <th>الرقم</th>
+            <th>الحاله</th>
+          </tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table><br>`;
     });
-    const document2=new Document({sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:1080,right:1080,bottom:1080,left:1080}}},children}]});
-    const buffer=await Packer.toBuffer(document2);
-    const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+
+    if(!allBranches.length) tablesHtml='<p style="text-align:center">لا توجد إلغاءات لهذا اليوم</p>';
+
+    const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+    <head><meta charset="utf-8">
+    <xml><w:WordDocument><w:View>Print</w:View><w:DoNotOptimizeForBrowser/></w:WordDocument></xml>
+    <style>
+      body{font-family:"Traditional Arabic",Arial;direction:rtl;margin:2cm;font-size:13pt;}
+      h1{text-align:center;font-size:18pt;font-weight:bold;margin:0 0 4px 0;}
+      h2{text-align:center;font-size:15pt;font-weight:bold;margin:0 0 4px 0;}
+      h3{text-align:center;font-size:13pt;font-weight:bold;margin:0 0 8px 0;}
+      .date{text-align:center;font-size:13pt;font-weight:bold;margin:8px 0;}
+      .line{border:none;border-bottom:2px solid black;margin:10px 0 18px 0;}
+      table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:12pt;}
+      th{background:#F5DEB3;border:1px solid #8B6914;padding:6px 10px;font-weight:bold;text-align:center;}
+      td{border:1px solid #8B6914;padding:5px 10px;text-align:center;}
+    </style>
+    </head>
+    <body>
+      <h1>شركة عصر الشرق</h1>
+      <h2>لادارة المطاعم</h2>
+      <h3>قسم خدمة العملاء</h3>
+      <div class="date">${dateStr}</div>
+      <hr class="line">
+      ${tablesHtml}
+    </body></html>`;
+
+    const blob=new Blob(['\ufeff'+html],{type:'application/msword;charset=utf-8'});
     const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download=`تقرير_الإلغاءات_${dateStr.replace(/\//g,'-')}.docx`; a.click();
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=`الغاءات_يوم_${dateStr.replace(/\//g,'-')}.doc`;
+    a.click();
     URL.revokeObjectURL(url);
-    showNote("تم تصدير التقرير بنجاح","success");
-  } catch(e){ console.error(e); showNote("خطأ في التصدير: "+e.message,"error"); }
+    showNote("تم تصدير التقرير بنجاح ✅","success");
+  }catch(e){ showNote("خطأ في التصدير: "+e.message,"error"); }
   finally{ document.getElementById('loadingOverlay').classList.remove('show'); }
 }
 
@@ -425,7 +491,7 @@ function showNote(msg,type){
 }
 
 // ── Init ──
-document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))submitForm(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)) submitForm(); });
 populateBranchSelect();
 renderBranchList();
 startListener();
